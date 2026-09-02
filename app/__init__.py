@@ -4,6 +4,8 @@ from config import Config
 from app.extensions import db, migrate, login_manager
 from app.auth import auth_bp
 
+import app.models
+
 
 def create_app():
     """Application Factory."""
