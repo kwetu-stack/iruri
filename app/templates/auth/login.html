@@ -13,16 +13,14 @@
             <div class="text-center mb-4">
 
                 <img
-    src="{{ url_for('static', filename='img/iruri-logo.png') }}"
-    alt="IRURI Logo"
-    class="login-logo"
->
-
-
+                    src="{{ url_for('static', filename='img/iruri-logo.png') }}"
+                    alt="IRURI Logo"
+                    class="login-logo"
+                >
 
             </div>
 
-            <form>
+            <form method="POST">
 
                 <div class="mb-3">
 
@@ -32,8 +30,11 @@
 
                     <input
                         type="email"
+                        name="email"
                         class="form-control"
-                        placeholder="Enter your email">
+                        placeholder="Enter your email"
+                        required
+                        autofocus>
 
                 </div>
 
@@ -45,12 +46,15 @@
 
                     <input
                         type="password"
+                        name="password"
                         class="form-control"
-                        placeholder="Enter your password">
+                        placeholder="Enter your password"
+                        required>
 
                 </div>
 
                 <button
+                    type="submit"
                     class="btn btn-primary w-100">
 
                     Sign In

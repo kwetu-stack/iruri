@@ -1,4 +1,6 @@
 from flask import Flask
+from app.dashboard import dashboard
+
 
 from config import Config
 from app.extensions import db, migrate, login_manager
@@ -23,5 +25,6 @@ def create_app():
         return "<h1>Welcome to IRURI™</h1>"
 
     app.register_blueprint(auth)
+    app.register_blueprint(dashboard)
 
     return app
