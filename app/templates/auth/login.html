@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}Login | IRURI™{% endblock %}
+
+{% block content %}
+
+<div class="row justify-content-center mt-5">
+
+    <div class="col-md-5">
+
+        <div class="card p-4">
+
+            <div class="text-center mb-4">
+
+                <img
+    src="{{ url_for('static', filename='img/iruri-logo.png') }}"
+    alt="IRURI Logo"
+    class="login-logo"
+>
+
+
+
+            </div>
+
+            <form>
+
+                <div class="mb-3">
+
+                    <label class="form-label">
+                        Email Address
+                    </label>
+
+                    <input
+                        type="email"
+                        class="form-control"
+                        placeholder="Enter your email">
+
+                </div>
+
+                <div class="mb-4">
+
+                    <label class="form-label">
+                        Password
+                    </label>
+
+                    <input
+                        type="password"
+                        class="form-control"
+                        placeholder="Enter your password">
+
+                </div>
+
+                <button
+                    class="btn btn-primary w-100">
+
+                    Sign In
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

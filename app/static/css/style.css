@@ -1,0 +1,229 @@
+/* ==========================================================
+   IRURI™ DESIGN SYSTEM v1.0
+   WHERE OPPORTUNITIES MEET
+========================================================== */
+
+/* ==========================
+   COLOR PALETTE
+========================== */
+
+:root{
+
+    /* Brand */
+
+    --iruri-primary: #4A2C17;      /* Trust & Stability */
+    --iruri-gold: #D4A017;         /* Opportunity & Prosperity */
+    --iruri-orange: #F28C28;       /* Energy & Action */
+
+    /* System */
+
+    --iruri-success: #2E8B57;
+    --iruri-danger: #C62828;
+    --iruri-warning: #F9A825;
+    --iruri-info: #1565C0;
+
+    /* Backgrounds */
+
+    --iruri-bg: #F8F6F2;
+    --iruri-card: #FFFFFF;
+
+    /* Typography */
+
+    --iruri-text: #2F2F2F;
+    --iruri-muted: #6B7280;
+
+    /* Borders */
+
+    --iruri-border: #E5E7EB;
+
+    /* Shadows */
+
+    --iruri-shadow:
+        0 10px 25px rgba(0,0,0,.08);
+ 
+        .login-logo{
+    width:140px;
+    display:block;
+    margin:0 auto 20px;
+}
+}
+
+
+/* ==========================
+   GLOBAL
+========================== */
+
+body{
+
+    font-family: "Segoe UI", sans-serif;
+    background: var(--iruri-bg);
+    color: var(--iruri-text);
+
+}
+
+
+/* ==========================
+   LINKS
+========================== */
+
+a{
+
+    color: var(--iruri-primary);
+    text-decoration: none;
+
+}
+
+a:hover{
+
+    color: var(--iruri-orange);
+
+}
+
+
+/* ==========================
+   NAVBAR
+========================== */
+
+.navbar{
+
+    background: var(--iruri-primary) !important;
+    box-shadow: var(--iruri-shadow);
+
+}
+
+.navbar-brand{
+
+    color: white !important;
+    font-weight: 700;
+    letter-spacing: 1px;
+
+}
+
+
+/* ==========================
+   CARDS
+========================== */
+
+.card{
+
+    border: none;
+    border-radius: 14px;
+    background: var(--iruri-card);
+    box-shadow: var(--iruri-shadow);
+
+}
+
+
+/* ==========================
+   BUTTONS
+========================== */
+
+.btn-primary{
+
+    background: var(--iruri-primary);
+    border-color: var(--iruri-primary);
+
+}
+
+.btn-primary:hover{
+
+    background: var(--iruri-orange);
+    border-color: var(--iruri-orange);
+
+}
+
+.btn-warning{
+
+    background: var(--iruri-gold);
+    border-color: var(--iruri-gold);
+    color: #222;
+
+}
+
+
+/* ==========================
+   FORMS
+========================== */
+
+.form-control{
+
+    border-radius: 10px;
+    border: 1px solid var(--iruri-border);
+
+}
+
+.form-control:focus{
+
+    border-color: var(--iruri-orange);
+
+    box-shadow:
+        0 0 0 .2rem rgba(242,140,40,.20);
+
+}
+
+
+/* ==========================
+   HEADINGS
+========================== */
+
+h1,h2,h3,h4,h5{
+
+    color: var(--iruri-primary);
+    font-weight: 700;
+
+}
+
+
+/* ==========================
+   ALERTS
+========================== */
+
+.alert{
+
+    border-radius: 10px;
+
+}
+
+
+/* ==========================
+   FOOTER
+========================== */
+
+.footer{
+
+    margin-top: 60px;
+    padding: 20px;
+    text-align: center;
+
+    color: var(--iruri-muted);
+
+}
+
+
+/* ==========================
+   UTILITIES
+========================== */
+
+.iruri-text{
+
+    color: var(--iruri-primary);
+
+}
+
+.iruri-gold{
+
+    color: var(--iruri-gold);
+
+}
+
+.iruri-orange{
+
+    color: var(--iruri-orange);
+
+}
+
+.shadow-iruri{
+
+    box-shadow: var(--iruri-shadow);
+
+}

@@ -2,7 +2,7 @@ from flask import Flask
 
 from config import Config
 from app.extensions import db, migrate, login_manager
-from app.auth import auth_bp
+from app.auth import auth
 
 import app.models
 
@@ -22,6 +22,6 @@ def create_app():
     def home():
         return "<h1>Welcome to IRURI™</h1>"
 
-    app.register_blueprint(auth_bp)
+    app.register_blueprint(auth)
 
     return app
