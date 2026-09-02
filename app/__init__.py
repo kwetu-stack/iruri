@@ -5,6 +5,7 @@ from app.dashboard import dashboard
 from config import Config
 from app.extensions import db, migrate, login_manager
 from app.auth import auth
+from app.properties import properties
 
 import app.models
 
@@ -26,5 +27,6 @@ def create_app():
 
     app.register_blueprint(auth)
     app.register_blueprint(dashboard)
+    app.register_blueprint(properties)
 
     return app
