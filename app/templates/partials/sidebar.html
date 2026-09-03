@@ -91,11 +91,13 @@
             </a>
         </li>
 
+        {% if current_user.role|lower in ["admin", "administrator"] %}
         <li class="nav-item">
-            <a class="nav-link" href="#">
-                ⚙️ Administration
+            <a class="nav-link" href="{{ url_for('admin.settings_index') }}">
+                Administration
             </a>
         </li>
+        {% endif %}
 
     </ul>
 

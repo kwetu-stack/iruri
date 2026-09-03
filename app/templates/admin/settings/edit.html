@@ -1,0 +1,25 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Edit {{ setting.setting_key|replace('_', ' ')|title }} | IRURI{% endblock %}
+
+{% block dashboard_content %}
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <h2 class="mb-1">Edit Setting</h2>
+        <p class="text-muted mb-4">{{ setting.setting_key|replace('_', ' ')|title }} ({{ setting.data_type }})</p>
+        <form method="post">
+            <label class="form-label" for="setting_value">Value</label>
+            {% if setting.data_type == "boolean" %}
+            <select class="form-select mb-3" id="setting_value" name="setting_value">
+                <option value="true" {% if setting.setting_value == "true" %}selected{% endif %}>true</option>
+                <option value="false" {% if setting.setting_value == "false" %}selected{% endif %}>false</option>
+            </select>
+            {% else %}
+            <input class="form-control mb-3" id="setting_value" name="setting_value" value="{{ setting.setting_value }}" required>
+            {% endif %}
+            <button class="btn btn-primary" type="submit">Save</button>
+            <a class="btn btn-outline-secondary" href="{{ url_for('admin.setting_detail', setting_id=setting.id) }}">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

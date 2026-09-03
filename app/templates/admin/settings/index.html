@@ -1,0 +1,53 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}System Settings | IRURI{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">System Settings</h2>
+        <p class="text-muted mb-0">Platform-wide configuration</p>
+    </div>
+</div>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-md-5">
+        <label class="visually-hidden" for="search">Search settings</label>
+        <input class="form-control" id="search" name="search" value="{{ search }}" placeholder="Search setting name">
+    </div>
+    <div class="col-md-4">
+        <label class="visually-hidden" for="category">Category</label>
+        <select class="form-select" id="category" name="category">
+            <option value="">All categories</option>
+            {% for category in categories %}
+            <option value="{{ category }}" {% if selected_category == category %}selected{% endif %}>{{ category }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">Filter</button>
+        <a class="btn btn-outline-secondary" href="{{ url_for('admin.settings_index') }}">Clear</a>
+    </div>
+</form>
+
+<div class="card shadow-sm border-0">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead><tr><th>Category</th><th>Setting</th><th>Value</th><th>Editable</th><th></th></tr></thead>
+            <tbody>
+            {% for setting in settings %}
+            <tr>
+                <td>{{ setting.category }}</td>
+                <td><a href="{{ url_for('admin.setting_detail', setting_id=setting.id) }}">{{ setting.setting_key|replace('_', ' ')|title }}</a></td>
+                <td><code>{{ setting.setting_value }}</code></td>
+                <td>{{ "Yes" if setting.is_editable else "No" }}</td>
+                <td>{% if setting.is_editable %}<a class="btn btn-sm btn-outline-primary" href="{{ url_for('admin.setting_edit', setting_id=setting.id) }}">Edit</a>{% endif %}</td>
+            </tr>
+            {% else %}
+            <tr><td colspan="5" class="text-center text-muted py-4">No settings found.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
