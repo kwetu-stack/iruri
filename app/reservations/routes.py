@@ -13,6 +13,7 @@ from app.reservations import reservations
 from app.reservations.models import PropertyReservation
 from app.properties.models import Property
 from app.audit.service import record_audit
+from app.notifications.service import notify_profile
 
 
 def _is_admin():
@@ -60,6 +61,16 @@ def _sync_expiry(reservation):
             PropertyReservation.id != reservation.id,
         ).first():
             reservation.property.status = "Available"
+        notify_profile(
+            reservation.buyer,
+            title="Reservation Expiring",
+            message=f"Your reservation for {reservation.property.title} has expired.",
+            notification_type="Reminder",
+            priority="High",
+            related_module="Reservations",
+            related_record_id=reservation.id,
+            action_url=url_for("reservations.details", id=reservation.id),
+        )
         db.session.commit()
 
 
@@ -172,6 +183,15 @@ def create(offer_id):
                 db.session.flush()
                 reservation.reservation_number = (
                     f"RES-{datetime.utcnow().year}-{reservation.id:06d}"
+                )
+                notify_profile(
+                    reservation.buyer,
+                    title="Reservation Created",
+                    message=f"Your reservation for {reservation.property.title} was created.",
+                    notification_type="Success",
+                    related_module="Reservations",
+                    related_record_id=reservation.id,
+                    action_url=url_for("reservations.details", id=reservation.id),
                 )
                 db.session.commit()
             except IntegrityError:

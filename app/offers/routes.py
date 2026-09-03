@@ -12,6 +12,7 @@ from app.offers.models import OFFER_STATUSES, OfferNegotiation, PropertyOffer
 from app.properties.models import Property
 from app.sellers.models import Seller
 from app.transactions.models import PropertyTransaction
+from app.notifications.service import notify_profile
 
 
 def _current_buyer():
@@ -138,6 +139,15 @@ def create():
             db.session.add(offer)
             db.session.flush()
             offer.offer_number = f"OFF-{datetime.utcnow().year}-{offer.id:06d}"
+            notify_profile(
+                buyer,
+                title="Offer Submitted",
+                message=f"Your offer for {property.title} was submitted.",
+                notification_type="Success",
+                related_module="Offers",
+                related_record_id=offer.id,
+                action_url=url_for("offers.review", id=offer.id),
+            )
             db.session.commit()
             flash("Offer submitted successfully.", "success")
             return redirect(url_for("buyers.details", id=buyer.id))
@@ -156,6 +166,7 @@ def review(id):
         return redirect(url_for("properties.details", id=offer.property_id))
 
     if request.method == "POST":
+        previous_status = offer.status
         if (
             offer.property.status == "Sold"
             or PropertyTransaction.query.filter_by(
@@ -178,6 +189,16 @@ def review(id):
             offer.seller_response = (
                 request.form.get("seller_response", "").strip() or None
             )
+            if status in {"Accepted", "Rejected"} and status != previous_status:
+                notify_profile(
+                    offer.buyer,
+                    title=f"Offer {status}",
+                    message=f"Your offer for {offer.property.title} was {status.lower()}.",
+                    notification_type="Success" if status == "Accepted" else "Warning",
+                    related_module="Offers",
+                    related_record_id=offer.id,
+                    action_url=url_for("offers.review", id=offer.id),
+                )
             db.session.commit()
             flash("Offer updated successfully.", "success")
             return redirect(url_for("properties.details", id=offer.property_id))
@@ -218,6 +239,15 @@ def counter_offer(id):
         if not amount:
             flash("Counter amount must be greater than zero.", "danger")
         else:
+            notify_profile(
+                offer.buyer if actor != "Buyer" else offer.property.seller,
+                title="Counter Offer Received",
+                message=f"A counter offer was made for {offer.property.title}.",
+                notification_type="Information",
+                related_module="Offers",
+                related_record_id=offer.id,
+                action_url=url_for("offers.review", id=offer.id),
+            )
             db.session.add(
                 OfferNegotiation(
                     property_offer=offer,
@@ -246,6 +276,16 @@ def _action(id, action):
     elif not _active_offer(offer) or not _change_status(offer, action):
         flash("This offer cannot be changed from its current status.", "danger")
     else:
+        if action in {"Accepted", "Rejected"}:
+            notify_profile(
+                offer.buyer,
+                title=f"Offer {action}",
+                message=f"Your offer for {offer.property.title} was {action.lower()}.",
+                notification_type="Success" if action == "Accepted" else "Warning",
+                related_module="Offers",
+                related_record_id=offer.id,
+                action_url=url_for("offers.review", id=offer.id),
+            )
         offer.status = action
         db.session.commit()
         flash(f"Offer {action.lower()} successfully.", "success")

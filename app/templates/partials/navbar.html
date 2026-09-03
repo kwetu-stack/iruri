@@ -17,6 +17,19 @@
 
         <div class="d-flex align-items-center">
 
+            <div class="dropdown me-4">
+                <a class="btn btn-outline-light btn-sm dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                    Notifications{% if notification_unread_count %} ({{ notification_unread_count }}){% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    {% for item in notification_latest %}
+                    <li><a class="dropdown-item{% if not item.is_read %} fw-semibold{% endif %}" href="{{ url_for('notifications.detail', id=item.id) }}">{{ item.title }}<small class="d-block text-muted">{{ item.created_at.strftime('%Y-%m-%d %H:%M') }}</small></a></li>
+                    {% else %}<li><span class="dropdown-item-text text-muted">No notifications</span></li>{% endfor %}
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{{ url_for('notifications.index') }}">Open Notification Center</a></li>
+                </ul>
+            </div>
+
             <span class="text-white me-4">
 
                 Welcome,

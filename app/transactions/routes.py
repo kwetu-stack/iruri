@@ -14,6 +14,7 @@ from app.sellers.models import Seller
 from app.transactions import transactions
 from app.transactions.models import PropertyTransaction
 from app.audit.service import record_audit
+from app.notifications.service import notify_profile
 
 
 def _is_admin():
@@ -184,6 +185,16 @@ def complete(agreement_id):
             transaction.transaction_number = (
                 f"TRX-{datetime.utcnow().year}-{transaction.id:06d}"
             )
+            for profile in (transaction.buyer, transaction.seller):
+                notify_profile(
+                    profile,
+                    title="Transaction Completed",
+                    message=f"The transaction for {transaction.property.title} was completed.",
+                    notification_type="Success",
+                    related_module="Transactions",
+                    related_record_id=transaction.id,
+                    action_url=url_for("transactions.details", id=transaction.id),
+                )
             try:
                 db.session.commit()
             except IntegrityError:

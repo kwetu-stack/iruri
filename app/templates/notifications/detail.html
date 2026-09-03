@@ -1,0 +1,11 @@
+{% extends "layouts/dashboard.html" %}
+{% block title %}{{ notification.title }} | IRURI{% endblock %}
+{% block dashboard_content %}
+<div class="card p-4">
+    <div class="d-flex justify-content-between"><h2>{{ notification.title }}</h2><span class="badge text-bg-secondary">{{ notification.priority }}</span></div>
+    <p class="lead">{{ notification.message }}</p>
+    <dl class="row"><dt class="col-sm-3">Type</dt><dd class="col-sm-9">{{ notification.notification_type }}</dd><dt class="col-sm-3">Priority</dt><dd class="col-sm-9">{{ notification.priority }}</dd><dt class="col-sm-3">Related Module</dt><dd class="col-sm-9">{{ notification.related_module or 'N/A' }}</dd><dt class="col-sm-3">Date Created</dt><dd class="col-sm-9">{{ notification.created_at.strftime('%Y-%m-%d %H:%M') }}</dd><dt class="col-sm-3">Read Status</dt><dd class="col-sm-9">{{ 'Read' if notification.is_read else 'Unread' }}</dd></dl>
+    {% if notification.action_url %}<a class="btn btn-primary" href="{{ notification.action_url }}">Open Related Record</a>{% endif %}
+    {% if current_user.role|lower in ['admin', 'administrator', 'super administrator'] %}<form class="d-inline" method="post" action="{{ url_for('notifications.delete', id=notification.id) }}"><button class="btn btn-outline-danger" type="submit">Delete</button></form>{% endif %}
+</div>
+{% endblock %}

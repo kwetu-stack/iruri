@@ -9,6 +9,7 @@ from app.extensions import db
 from app.properties.models import Property
 from app.viewings import viewings
 from app.viewings.models import VIEWING_STATUSES, ViewingRequest
+from app.notifications.service import notify_profile
 
 
 def _form_data():
@@ -75,6 +76,15 @@ def create():
         viewing_request.request_number = (
             f"VR-{datetime.utcnow().year}-{viewing_request.id:06d}"
         )
+        notify_profile(
+            buyer,
+            title="Viewing Request Submitted",
+            message=f"Your viewing request for {property.title} was submitted.",
+            notification_type="Success",
+            related_module="Viewings",
+            related_record_id=viewing_request.id,
+            action_url=url_for("viewings.index"),
+        )
         db.session.commit()
         flash("Viewing request submitted successfully.", "success")
         return redirect(url_for("viewings.index"))
@@ -86,6 +96,7 @@ def create():
 def edit(id):
     viewing_request = ViewingRequest.query.get_or_404(id)
     if request.method == "POST":
+        previous_status = viewing_request.status
         status = request.form.get("status", "").strip()
         agent_id = request.form.get("agent_id", type=int)
         if status not in VIEWING_STATUSES:
@@ -98,6 +109,16 @@ def edit(id):
         viewing_request.admin_notes = (
             request.form.get("admin_notes", "").strip() or None
         )
+        if status != previous_status and status in {"Approved", "Rejected"}:
+            notify_profile(
+                viewing_request.buyer,
+                title=f"Viewing Request {status}",
+                message=f"Your viewing request for {viewing_request.property.title} was {status.lower()}.",
+                notification_type="Success" if status == "Approved" else "Warning",
+                related_module="Viewings",
+                related_record_id=viewing_request.id,
+                action_url=url_for("viewings.index"),
+            )
         db.session.commit()
         flash("Viewing request updated successfully.", "success")
         return redirect(url_for("viewings.index"))

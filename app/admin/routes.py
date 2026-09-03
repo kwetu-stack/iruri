@@ -8,6 +8,7 @@ from app.admin.models import SystemSetting
 from app.admin.roles import PERMISSION_GROUPS, Permission, Role
 from app.extensions import db
 from app.audit.service import record_audit
+from app.notifications.service import administrator_users, notify_users
 
 CATEGORIES = (
     "General",
@@ -218,6 +219,16 @@ def setting_edit(setting_id):
                 "System Setting",
                 setting.id,
             )
+            notify_users(
+                administrator_users(),
+                title="System Setting Updated",
+                message=f"The system setting {setting.setting_key} was updated.",
+                notification_type="Information",
+                related_module="Administration",
+                related_record_id=setting.id,
+                action_url=url_for("admin.setting_detail", setting_id=setting.id),
+            )
+            db.session.commit()
             flash("Setting updated.", "success")
             return redirect(url_for("admin.setting_detail", setting_id=setting.id))
     return render_template("admin/settings/edit.html", setting=setting)

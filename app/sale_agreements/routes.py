@@ -17,6 +17,7 @@ from app.sale_agreements.models import (
 )
 from app.transactions.models import PropertyTransaction
 from app.audit.service import record_audit
+from app.notifications.service import notify_profile
 
 
 def _is_admin():
@@ -240,6 +241,16 @@ def create(reservation_id):
                 agreement.agreement_number = (
                     f"AGR-{datetime.utcnow().year}-{agreement.id:06d}"
                 )
+                for profile in (agreement.buyer, agreement.seller):
+                    notify_profile(
+                        profile,
+                        title="Sale Agreement Created",
+                        message=f"A sale agreement for {agreement.property.title} was created.",
+                        notification_type="Information",
+                        related_module="Sale Agreements",
+                        related_record_id=agreement.id,
+                        action_url=url_for("sale_agreements.details", id=agreement.id),
+                    )
                 db.session.commit()
             except IntegrityError:
                 db.session.rollback()
@@ -328,6 +339,22 @@ def payment_create(id):
             db.session.flush()
             payment.payment_number = f"PAY-{datetime.utcnow().year}-{payment.id:06d}"
             _recalculate_agreement(agreement)
+            for profile in (agreement.buyer, agreement.seller):
+                notify_profile(
+                    profile,
+                    title=(
+                        "Final Payment Received"
+                        if payment.payment_type == "Final Payment"
+                        else "Payment Recorded"
+                    ),
+                    message=f"A payment was recorded for the sale agreement covering {agreement.property.title}.",
+                    notification_type="Success",
+                    related_module="Payments",
+                    related_record_id=payment.id,
+                    action_url=url_for(
+                        "sale_agreements.payment_details", id=payment.id
+                    ),
+                )
             db.session.commit()
             record_audit(
                 "Create",

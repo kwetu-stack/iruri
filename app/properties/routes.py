@@ -22,6 +22,7 @@ from app.developers.models import Developer
 from app.agents.models import Agent
 from app.buyers.models import Buyer
 from app.audit.service import record_audit
+from app.notifications.service import notify_profile
 
 
 from app.extensions import db
@@ -1018,6 +1019,7 @@ def edit(id):
             return redirect(url_for("properties.details", id=property.id))
 
     if request.method == "POST":
+        previous_status = property.status
         seller_id = request.form.get("seller_id", "").strip()
         developer_id = request.form.get("developer_id", "").strip()
         agent_id = request.form.get("agent_id", "").strip()
@@ -1105,6 +1107,22 @@ def edit(id):
         property.amenities = _selected_amenities()
         property.features = _selected_features()
 
+        if property.status != previous_status and property.status in {
+            "Approved",
+            "Rejected",
+            "Sold",
+        }:
+            notify_profile(
+                property.seller,
+                title=f"Property {property.status}",
+                message=f"Your property {property.title} was marked {property.status.lower()}.",
+                notification_type=(
+                    "Success" if property.status == "Approved" else "Warning"
+                ),
+                related_module="Marketplace",
+                related_record_id=property.id,
+                action_url=url_for("properties.details", id=property.id),
+            )
         db.session.commit()
 
         flash("Property updated successfully.", "success")

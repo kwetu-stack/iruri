@@ -24,6 +24,9 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(50), nullable=False, default="Buyer")
     role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
     role_record = db.relationship("Role", back_populates="users")
+    notifications = db.relationship(
+        "Notification", back_populates="recipient", cascade="all, delete-orphan"
+    )
 
     is_verified = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)

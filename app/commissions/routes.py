@@ -16,6 +16,7 @@ from app.commissions.models import (
 from app.extensions import db
 from app.audit.service import record_audit
 from app.sale_agreements.models import SaleAgreement
+from app.notifications.service import notify_profile
 
 
 def _is_admin():
@@ -144,6 +145,25 @@ def create(agreement_id):
             commission.commission_number = (
                 f"COM-{datetime.utcnow().year}-{commission.id:06d}"
             )
+            notify_profile(
+                commission.seller,
+                title="Commission Generated",
+                message=f"A commission was generated for {agreement.property.title}.",
+                notification_type="Information",
+                related_module="Commissions",
+                related_record_id=commission.id,
+                action_url=url_for("commissions.details", id=commission.id),
+            )
+            if commission.agent:
+                notify_profile(
+                    commission.agent,
+                    title="Commission Generated",
+                    message=f"A commission was generated for {agreement.property.title}.",
+                    notification_type="Information",
+                    related_module="Commissions",
+                    related_record_id=commission.id,
+                    action_url=url_for("commissions.details", id=commission.id),
+                )
             db.session.commit()
             record_audit(
                 "Create",
