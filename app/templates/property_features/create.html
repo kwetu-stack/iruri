@@ -1,0 +1,23 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Create Property Feature | IRURI™{% endblock %}
+
+{% block dashboard_content %}
+<div class="row justify-content-center"><div class="col-lg-7"><div class="card shadow-sm">
+    <div class="card-header"><h3 class="mb-0">Create Property Feature</h3></div>
+    <div class="card-body">
+        <form method="POST">
+            <div class="mb-3">
+                <label class="form-label" for="name">Feature Name</label>
+                <input id="name" type="text" name="name" class="form-control" value="{{ request.form.get('name', '') }}" required>
+            </div>
+            <div class="mb-4">
+                <label class="form-label" for="category">Category</label>
+                <input id="category" type="text" name="category" class="form-control" value="{{ request.form.get('category', '') }}">
+            </div>
+            <button type="submit" class="btn btn-primary">Create Feature</button>
+            <a href="{{ url_for('properties.features_index') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div></div></div>
+{% endblock %}

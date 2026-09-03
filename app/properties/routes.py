@@ -19,7 +19,7 @@ from app.agents.models import Agent
 from app.extensions import db
 from app.properties import properties
 from app.properties.image_models import PropertyImage
-from app.properties.models import Amenity, Property
+from app.properties.models import Amenity, Property, PropertyFeature
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
@@ -31,6 +31,9 @@ def _relationship_options():
         "developers": Developer.query.order_by(Developer.developer_number).all(),
         "agents": Agent.query.order_by(Agent.agent_number).all(),
         "amenities": Amenity.query.order_by(Amenity.category, Amenity.name).all(),
+        "features": PropertyFeature.query.order_by(
+            PropertyFeature.category, PropertyFeature.name
+        ).all(),
     }
 
 
@@ -72,6 +75,17 @@ def _selected_amenities():
     }
     return (
         Amenity.query.filter(Amenity.id.in_(amenity_ids)).all() if amenity_ids else []
+    )
+
+
+def _selected_features():
+    feature_ids = {
+        int(value) for value in request.form.getlist("feature_ids") if value.isdigit()
+    }
+    return (
+        PropertyFeature.query.filter(PropertyFeature.id.in_(feature_ids)).all()
+        if feature_ids
+        else []
     )
 
 
@@ -148,6 +162,84 @@ def amenities_delete(id):
         flash("Amenity deleted successfully.", "success")
         return redirect(url_for("properties.amenities_index"))
     return render_template("amenities/delete.html", amenity=amenity)
+
+
+def _feature_form(template, feature=None):
+    return render_template(template, feature=feature)
+
+
+@properties.route("/features")
+@login_required
+def features_index():
+    features = PropertyFeature.query.order_by(
+        PropertyFeature.category, PropertyFeature.name
+    ).all()
+    return render_template("property_features/index.html", features=features)
+
+
+@properties.route("/features/create", methods=["GET", "POST"])
+@login_required
+def features_create():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Feature name is required.", "danger")
+            return _feature_form("property_features/create.html")
+        if PropertyFeature.query.filter(
+            db.func.lower(PropertyFeature.name) == name.lower()
+        ).first():
+            flash("A feature with that name already exists.", "danger")
+            return _feature_form("property_features/create.html")
+
+        db.session.add(
+            PropertyFeature(
+                name=name,
+                category=request.form.get("category", "").strip() or None,
+            )
+        )
+        db.session.commit()
+        flash("Feature created successfully.", "success")
+        return redirect(url_for("properties.features_index"))
+
+    return _feature_form("property_features/create.html")
+
+
+@properties.route("/features/<int:id>/edit", methods=["GET", "POST"])
+@login_required
+def features_edit(id):
+    feature = PropertyFeature.query.get_or_404(id)
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        duplicate = PropertyFeature.query.filter(
+            db.func.lower(PropertyFeature.name) == name.lower(),
+            PropertyFeature.id != feature.id,
+        ).first()
+        if not name:
+            flash("Feature name is required.", "danger")
+            return _feature_form("property_features/edit.html", feature)
+        if duplicate:
+            flash("A feature with that name already exists.", "danger")
+            return _feature_form("property_features/edit.html", feature)
+
+        feature.name = name
+        feature.category = request.form.get("category", "").strip() or None
+        db.session.commit()
+        flash("Feature updated successfully.", "success")
+        return redirect(url_for("properties.features_index"))
+
+    return _feature_form("property_features/edit.html", feature)
+
+
+@properties.route("/features/<int:id>/delete", methods=["GET", "POST"])
+@login_required
+def features_delete(id):
+    feature = PropertyFeature.query.get_or_404(id)
+    if request.method == "POST":
+        db.session.delete(feature)
+        db.session.commit()
+        flash("Feature deleted successfully.", "success")
+        return redirect(url_for("properties.features_index"))
+    return render_template("property_features/delete.html", feature=feature)
 
 
 @properties.route("/")
@@ -331,6 +423,7 @@ def create():
             price=float(request.form["price"]),
             county=request.form["county"],
             amenities=_selected_amenities(),
+            features=_selected_features(),
         )
 
         db.session.add(property)
@@ -433,6 +526,7 @@ def edit(id):
         property.featured = request.form.get("featured") == "on"
         property.verified = request.form.get("verified") == "on"
         property.amenities = _selected_amenities()
+        property.features = _selected_features()
 
         db.session.commit()
 

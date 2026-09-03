@@ -18,6 +18,22 @@ property_amenities = db.Table(
     ),
 )
 
+property_features = db.Table(
+    "property_features",
+    db.Column(
+        "property_id",
+        db.Integer,
+        db.ForeignKey("properties.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    db.Column(
+        "feature_id",
+        db.Integer,
+        db.ForeignKey("features.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
 
 class Amenity(db.Model):
     __tablename__ = "amenities"
@@ -36,6 +52,24 @@ class Amenity(db.Model):
 
     def __repr__(self):
         return f"<Amenity {self.name}>"
+
+
+class PropertyFeature(db.Model):
+    __tablename__ = "features"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    category = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    properties = db.relationship(
+        "Property",
+        secondary=property_features,
+        back_populates="features",
+    )
+
+    def __repr__(self):
+        return f"<PropertyFeature {self.name}>"
 
 
 class Property(db.Model):
@@ -116,6 +150,13 @@ class Property(db.Model):
     amenities = db.relationship(
         "Amenity",
         secondary=property_amenities,
+        back_populates="properties",
+        lazy="selectin",
+    )
+
+    features = db.relationship(
+        "PropertyFeature",
+        secondary=property_features,
         back_populates="properties",
         lazy="selectin",
     )

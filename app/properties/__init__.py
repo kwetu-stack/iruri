@@ -6,7 +6,7 @@ from app.extensions import db
 properties = Blueprint("properties", __name__, url_prefix="/properties")
 
 # Import models first so SQLAlchemy registers them
-from app.properties.models import Amenity, Property
+from app.properties.models import Amenity, Property, PropertyFeature
 from app.properties.image_models import PropertyImage
 
 DEFAULT_AMENITIES = (
@@ -28,6 +28,34 @@ DEFAULT_AMENITIES = (
     "Children's Play Area",
 )
 
+DEFAULT_FEATURES = {
+    "Interior": (
+        "Ensuite Bedrooms",
+        "Walk-in Closet",
+        "Fitted Kitchen",
+        "Pantry",
+        "Laundry Area",
+        "Home Office",
+        "Air Conditioning",
+    ),
+    "Exterior": ("Balcony", "Terrace", "Garden", "Rooftop", "Perimeter Wall"),
+    "Construction": (
+        "Newly Built",
+        "Newly Renovated",
+        "Modern Design",
+        "Smart Home",
+        "Energy Efficient",
+    ),
+    "Ownership": ("Freehold", "Leasehold"),
+    "Location": (
+        "Corner Plot",
+        "Sea View",
+        "Mountain View",
+        "Lake View",
+        "Gated Community",
+    ),
+}
+
 
 def seed_default_amenities():
     try:
@@ -38,6 +66,22 @@ def seed_default_amenities():
         return
 
     db.session.add_all(Amenity(name=name) for name in DEFAULT_AMENITIES)
+    db.session.commit()
+
+
+def seed_default_features():
+    try:
+        if PropertyFeature.query.first() is not None:
+            return
+    except OperationalError:
+        db.session.rollback()
+        return
+
+    db.session.add_all(
+        PropertyFeature(name=name, category=category)
+        for category, names in DEFAULT_FEATURES.items()
+        for name in names
+    )
     db.session.commit()
 
 

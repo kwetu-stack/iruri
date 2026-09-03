@@ -146,6 +146,21 @@
                         </div>
                     </div>
 
+                    <div class="mb-4">
+                        <label class="form-label">Property Features</label>
+                        {% set selected_feature_ids = request.form.getlist('feature_ids') if request.form else property.features|map(attribute='id')|map('string')|list %}
+                        <div class="row g-2">
+                            {% for feature in features %}
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="feature_ids" value="{{ feature.id }}" id="feature-{{ feature.id }}" {% if feature.id|string in selected_feature_ids %}checked{% endif %}>
+                                    <label class="form-check-label" for="feature-{{ feature.id }}">{{ feature.name }}</label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
                     <div class="form-check mb-2">
                         <input type="checkbox" name="featured" class="form-check-input" id="featured" {% if request.form.get('featured') == 'on' or (not request.form and property.featured) %}checked{% endif %}>
                         <label class="form-check-label" for="featured">Featured</label>

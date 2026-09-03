@@ -1,4 +1,4 @@
-from flask import Flask, redirect, render_template, url_for
+from flask import Flask, current_app, redirect, render_template, url_for
 from flask_login import login_required
 from app.dashboard import dashboard
 
@@ -6,7 +6,7 @@ from app.dashboard import dashboard
 from config import Config
 from app.extensions import db, migrate, login_manager
 from app.auth import auth
-from app.properties import properties, seed_default_amenities
+from app.properties import properties, seed_default_amenities, seed_default_features
 from app.agents import agents
 from app.agencies import agencies
 from app.developers import developers
@@ -41,6 +41,24 @@ def create_app():
         amenities = Amenity.query.order_by(Amenity.category, Amenity.name).all()
         return render_template("amenities/index.html", amenities=amenities)
 
+    @app.route("/features")
+    @app.route("/features/", strict_slashes=False)
+    @login_required
+    def features_root():
+        return current_app.view_functions["properties.features_index"]()
+
+    @app.route("/property-features")
+    @app.route("/property-features/", strict_slashes=False)
+    @login_required
+    def legacy_property_features_root():
+        return current_app.view_functions["properties.features_index"]()
+
+    @app.route("/dashboard/property-features")
+    @app.route("/dashboard/property-features/", strict_slashes=False)
+    @login_required
+    def dashboard_property_features_root():
+        return current_app.view_functions["properties.features_index"]()
+
     app.register_blueprint(auth)
     app.register_blueprint(dashboard)
     app.register_blueprint(properties)
@@ -52,5 +70,6 @@ def create_app():
 
     with app.app_context():
         seed_default_amenities()
+        seed_default_features()
 
     return app

@@ -18,6 +18,14 @@ class AmenitiesRouteTests(unittest.TestCase):
         response = self.client.get("/properties/amenities")
         self.assertEqual(response.status_code, 200)
 
+    def test_features_root_alias_redirects_to_properties_features(self):
+        response = self.client.get("/features")
+        self.assertEqual(response.status_code, 200)
+
+    def test_property_features_dashboard_alias_redirects_to_properties_features(self):
+        response = self.client.get("/dashboard/property-features")
+        self.assertEqual(response.status_code, 200)
+
 
 if __name__ == "__main__":
     unittest.main()

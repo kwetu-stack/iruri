@@ -1,0 +1,17 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Delete Property Feature | IRURI™{% endblock %}
+
+{% block dashboard_content %}
+<div class="row justify-content-center"><div class="col-lg-6"><div class="card shadow-sm border-danger">
+    <div class="card-header"><h3 class="mb-0">Delete Property Feature</h3></div>
+    <div class="card-body">
+        <p>Delete <strong>{{ feature.name }}</strong>?</p>
+        <p class="text-muted">This removes the feature from all associated properties.</p>
+        <form method="POST">
+            <button type="submit" class="btn btn-danger">Delete Feature</button>
+            <a href="{{ url_for('properties.features_index') }}" class="btn btn-secondary">Cancel</a>
+        </form>
+    </div>
+</div></div></div>
+{% endblock %}
