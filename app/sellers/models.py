@@ -38,6 +38,9 @@ class Seller(db.Model):
         cascade="all, delete-orphan",
         order_by="SaleAgreement.created_at.desc()",
     )
+    commissions = db.relationship(
+        "PropertyCommission", back_populates="seller", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Seller {self.seller_number}>"

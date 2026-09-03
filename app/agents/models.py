@@ -32,6 +32,7 @@ class Agent(db.Model):
     )
 
     offers = db.relationship("PropertyOffer", back_populates="agent")
+    commissions = db.relationship("PropertyCommission", back_populates="agent")
 
     def __repr__(self):
         return f"<Agent {self.agent_number}>"

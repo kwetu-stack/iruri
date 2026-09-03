@@ -7,6 +7,7 @@ from config import Config
 from app.extensions import db, migrate, login_manager
 from app.auth import auth
 from app.properties import properties, seed_default_amenities, seed_default_features
+from app.commissions import commissions
 from app.agents import agents
 from app.agencies import agencies
 from app.developers import developers
@@ -67,6 +68,7 @@ def create_app():
     app.register_blueprint(dashboard)
     app.register_blueprint(properties)
     app.register_blueprint(agents)
+    app.register_blueprint(commissions)
     app.register_blueprint(agencies)
     app.register_blueprint(developers)
     app.register_blueprint(sellers)

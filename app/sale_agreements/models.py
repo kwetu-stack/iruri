@@ -96,6 +96,11 @@ class SaleAgreement(db.Model):
         cascade="all, delete-orphan",
         order_by="PropertyPayment.payment_date.desc(), PropertyPayment.id.desc()",
     )
+    commissions = db.relationship(
+        "PropertyCommission",
+        back_populates="sale_agreement",
+        cascade="all, delete-orphan",
+    )
 
     @hybrid_property
     def total_paid(self):

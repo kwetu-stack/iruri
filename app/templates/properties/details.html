@@ -2,6 +2,7 @@
 
 {% block title %}
 {{ property.title }} | IRURI
+<div class="card shadow-sm border-0 mb-4"><div class="card-body"><h5 class="card-title">Commission Summary</h5>{% set total = property.commissions|sum(attribute='commission_amount') %}{% set paid = property.commissions|sum(attribute='amount_paid') %}<div class="row"><div class="col-md-4">Total Commission<br><strong>{{ '{:,.2f}'.format(total) }}</strong></div><div class="col-md-4">Paid<br><strong>{{ '{:,.2f}'.format(paid) }}</strong></div><div class="col-md-4">Outstanding<br><strong>{{ '{:,.2f}'.format(total - paid) }}</strong></div></div></div></div>
 {% endblock %}
 
 {% block dashboard_content %}

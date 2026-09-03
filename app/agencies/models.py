@@ -26,6 +26,7 @@ class Agency(db.Model):
     year_established = db.Column(db.Integer)
     logo = db.Column(db.String(255))
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    commissions = db.relationship("PropertyCommission", back_populates="agency")
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
