@@ -1,6 +1,57 @@
 {% extends "layouts/dashboard.html" %}
 {% block title %}{{ buyer.full_name or buyer.company_name }} | IRURI{% endblock %}
 {% block dashboard_content %}
+<div class="card shadow-sm border-0 mb-4">
+	<div class="card-body">
+		<div class="d-flex justify-content-between align-items-center mb-3">
+			<h5 class="card-title mb-0">Saved Properties</h5>
+			<span class="badge bg-secondary">{{ buyer.saved_properties|length }}</span>
+		</div>
+		{% if buyer.saved_properties %}
+		<div class="table-responsive">
+			<table class="table table-hover align-middle mb-0">
+				<thead>
+					<tr>
+						<th>Property Image</th>
+						<th>Property Title</th>
+						<th>County</th>
+						<th>Price</th>
+						<th>Listing Number</th>
+						<th>Saved Date</th>
+						<th>Remove</th>
+					</tr>
+				</thead>
+				<tbody>
+					{% for saved in buyer.saved_properties %}
+					<tr>
+						<td>
+							{% if saved.property.images %}
+							<img src="{{ url_for('static', filename='uploads/properties/' ~ saved.property.images[0].filename) }}" alt="{{ saved.property.title }}" width="72" height="52" style="object-fit: cover;">
+							{% else %}
+							<span class="text-muted">No image</span>
+							{% endif %}
+						</td>
+						<td><a href="{{ url_for('properties.details', id=saved.property.id) }}">{{ saved.property.title }}</a></td>
+						<td>{{ saved.property.county or "Not specified" }}</td>
+						<td>{{ saved.property.currency or "KES" }} {{ "{:,.2f}".format(saved.property.price or 0) }}</td>
+						<td>{{ saved.property.listing_number }}</td>
+						<td>{{ saved.saved_at.strftime('%d %b %Y') }}</td>
+						<td>
+							<form method="POST" action="{{ url_for('properties.remove_saved_property', id=saved.property.id) }}">
+								<input type="hidden" name="buyer_id" value="{{ buyer.id }}">
+								<button type="submit" class="btn btn-sm btn-outline-danger">Remove</button>
+							</form>
+						</td>
+					</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		</div>
+		{% else %}
+		<p class="text-muted mb-0">No saved properties yet.</p>
+		{% endif %}
+	</div>
+</div>
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4"><div class="d-flex align-items-center gap-3">{% if buyer.profile_photo %}<img src="{{ url_for('static', filename='uploads/buyers/' ~ buyer.profile_photo) }}" alt="Buyer photo" class="rounded-circle" width="88" height="88" style="object-fit: cover;">{% else %}<img src="{{ url_for('static', filename='img/buyer-placeholder.svg') }}" alt="Buyer placeholder" class="rounded-circle" width="88" height="88">{% endif %}<div><h2 class="mb-1">{{ buyer.full_name or buyer.company_name }}</h2><p class="text-muted mb-0">{{ buyer.buyer_number }} &middot; {{ buyer.buyer_type }}</p></div></div><div class="d-flex gap-2"><span class="badge {{ 'bg-success' if buyer.verified else 'bg-secondary' }} fs-6">{{ "Verified" if buyer.verified else "Not verified" }}</span><span class="badge {{ 'bg-success' if buyer.active else 'bg-secondary' }} fs-6">{{ "Active" if buyer.active else "Inactive" }}</span></div></div>
 <div class="row g-4"><div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5 class="card-title mb-3">Identity Information</h5><dl class="row mb-0"><dt class="col-sm-5">Buyer Type</dt><dd class="col-sm-7">{{ buyer.buyer_type }}</dd><dt class="col-sm-5">Full Name</dt><dd class="col-sm-7">{{ buyer.full_name or "Not provided" }}</dd><dt class="col-sm-5">Company Name</dt><dd class="col-sm-7">{{ buyer.company_name or "Not provided" }}</dd><dt class="col-sm-5">National ID</dt><dd class="col-sm-7">{{ buyer.national_id or "Not provided" }}</dd><dt class="col-sm-5">Passport Number</dt><dd class="col-sm-7">{{ buyer.passport_number or "Not provided" }}</dd><dt class="col-sm-5">KRA PIN</dt><dd class="col-sm-7">{{ buyer.kra_pin or "Not provided" }}</dd></dl></div></div></div><div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5 class="card-title mb-3">Contact Information</h5><dl class="row mb-0"><dt class="col-sm-5">Phone</dt><dd class="col-sm-7">{{ buyer.phone }}</dd><dt class="col-sm-5">Alternative Phone</dt><dd class="col-sm-7">{{ buyer.alternative_phone or "Not provided" }}</dd><dt class="col-sm-5">Email</dt><dd class="col-sm-7">{{ buyer.email or "Not provided" }}</dd></dl></div></div></div><div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5 class="card-title mb-3">Location</h5><dl class="row mb-0"><dt class="col-sm-4">County</dt><dd class="col-sm-8">{{ buyer.county or "Not specified" }}</dd><dt class="col-sm-4">Town</dt><dd class="col-sm-8">{{ buyer.town or "Not specified" }}</dd><dt class="col-sm-4">Address</dt><dd class="col-sm-8">{{ buyer.address or "Not specified" }}</dd><dt class="col-sm-4">Postal Address</dt><dd class="col-sm-8">{{ buyer.postal_address or "Not specified" }}</dd></dl></div></div></div><div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5 class="card-title mb-3">Purchase Preferences</h5><dl class="row mb-0"><dt class="col-sm-6">Budget Range</dt><dd class="col-sm-6">{{ "KES {:,.2f}".format(buyer.budget_min) if buyer.budget_min is not none else "-" }} - {{ "KES {:,.2f}".format(buyer.budget_max) if buyer.budget_max is not none else "-" }}</dd><dt class="col-sm-6">Property Type</dt><dd class="col-sm-6">{{ buyer.preferred_property_type or "Not specified" }}</dd><dt class="col-sm-6">Preferred County</dt><dd class="col-sm-6">{{ buyer.preferred_county or "Not specified" }}</dd><dt class="col-sm-6">Preferred Town</dt><dd class="col-sm-6">{{ buyer.preferred_town or "Not specified" }}</dd><dt class="col-sm-6">Financing Method</dt><dd class="col-sm-6">{{ buyer.financing_method or "Not specified" }}</dd></dl></div></div></div><div class="col-12"><div class="card shadow-sm border-0"><div class="card-body"><h5 class="card-title">Notes</h5><p class="mb-0">{{ buyer.notes or "No notes added." }}</p></div></div></div></div>
 <div class="d-flex flex-wrap gap-2 mt-4"><a href="{{ url_for('buyers.index') }}" class="btn btn-secondary">Back to Buyers</a><a href="{{ url_for('buyers.edit', id=buyer.id) }}" class="btn btn-warning">Edit Buyer</a><a href="{{ url_for('buyers.delete', id=buyer.id) }}" class="btn btn-danger">Delete Buyer</a></div>

@@ -190,6 +190,14 @@
 
     </div>
 
+    {% if current_buyer %}
+    <form method="POST" action="{{ url_for('properties.save_property', id=property.id) }}">
+        <button type="submit" class="btn {{ 'btn-danger' if saved_property else 'btn-outline-danger' }}">
+            {{ '♥ Saved' if saved_property else '♡ Save Property' }}
+        </button>
+    </form>
+    {% endif %}
+
     <span class="badge bg-success fs-6">
         {{ property.status or "Status unavailable" }}
     </span>

@@ -38,5 +38,12 @@ class Buyer(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
+    saved_properties = db.relationship(
+        "SavedProperty",
+        back_populates="buyer",
+        cascade="all, delete-orphan",
+        order_by="SavedProperty.saved_at.desc()",
+    )
+
     def __repr__(self):
         return f"<Buyer {self.buyer_number}>"

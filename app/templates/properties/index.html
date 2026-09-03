@@ -49,6 +49,7 @@ Properties | IRURI™
                     <th>Amenities</th>
                     <th>Features</th>
                     <th class="text-end">Price</th>
+                    <th>Saved</th>
                     <th>Status</th>
                     <th class="text-center">Actions</th>
 
@@ -87,6 +88,14 @@ Properties | IRURI™
                     </td>
 
                     <td>
+                        {% if property.saved_properties|length %}
+                        <span class="badge bg-info text-dark">Saved by {{ property.saved_properties|length }} Buyers</span>
+                        {% else %}
+                        <span class="text-muted">None</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
 
                         <span class="badge bg-success">
                             {{ property.status }}
@@ -122,7 +131,7 @@ Properties | IRURI™
 
                 <tr>
 
-                    <td colspan="13" class="text-center py-5">
+                    <td colspan="14" class="text-center py-5">
 
                         <h5 class="mb-2">No Properties Found</h5>
 

@@ -20,6 +20,7 @@ from werkzeug.utils import secure_filename
 from app.sellers.models import Seller
 from app.developers.models import Developer
 from app.agents.models import Agent
+from app.buyers.models import Buyer
 
 
 from app.extensions import db
@@ -32,6 +33,7 @@ from app.properties.models import (
     PropertyFeature,
     PropertyFloorPlan,
     PropertyVideo,
+    SavedProperty,
 )
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
@@ -59,6 +61,12 @@ DOCUMENT_TYPES = (
     "KRA PIN",
     "Other",
 )
+
+
+def _current_buyer():
+    if not current_user.is_authenticated or not current_user.email:
+        return None
+    return Buyer.query.filter_by(email=current_user.email).first()
 
 
 def _relationship_options():
@@ -376,11 +384,65 @@ def index():
 def details(id):
 
     property = Property.query.get_or_404(id)
+    buyer = _current_buyer()
+    saved_property = (
+        SavedProperty.query.filter_by(
+            buyer_id=buyer.id, property_id=property.id
+        ).first()
+        if buyer
+        else None
+    )
 
     return render_template(
         "properties/details.html",
         property=property,
+        saved_property=saved_property,
+        current_buyer=buyer,
     )
+
+
+@properties.route("/<int:id>/save", methods=["POST"])
+@login_required
+def save_property(id):
+    property = Property.query.get_or_404(id)
+    buyer = _current_buyer()
+    if not buyer:
+        flash("A buyer profile is required to save properties.", "danger")
+        return redirect(url_for("properties.details", id=property.id))
+
+    saved_property = SavedProperty.query.filter_by(
+        buyer_id=buyer.id, property_id=property.id
+    ).first()
+    if saved_property:
+        db.session.delete(saved_property)
+        flash("Property removed from saved properties.", "success")
+    else:
+        db.session.add(SavedProperty(buyer_id=buyer.id, property_id=property.id))
+        flash("Property saved successfully.", "success")
+    db.session.commit()
+    return redirect(url_for("properties.details", id=property.id))
+
+
+@properties.route("/<int:id>/remove-saved", methods=["POST"])
+@login_required
+def remove_saved_property(id):
+    property = Property.query.get_or_404(id)
+    buyer_id = request.form.get("buyer_id", type=int)
+    buyer = _current_buyer()
+    if buyer_id and (not buyer or buyer.id != buyer_id):
+        buyer = Buyer.query.get_or_404(buyer_id)
+    if not buyer:
+        flash("A buyer profile is required to remove saved properties.", "danger")
+        return redirect(url_for("properties.details", id=property.id))
+
+    saved_property = SavedProperty.query.filter_by(
+        buyer_id=buyer.id, property_id=property.id
+    ).first()
+    if saved_property:
+        db.session.delete(saved_property)
+        db.session.commit()
+        flash("Property removed from saved properties.", "success")
+    return redirect(url_for("buyers.details", id=buyer.id))
 
 
 def _video_upload_folder():

@@ -2,6 +2,36 @@ from datetime import datetime
 
 from app.extensions import db
 
+
+class SavedProperty(db.Model):
+    """A property saved by a buyer."""
+
+    __tablename__ = "saved_properties"
+    __table_args__ = (
+        db.UniqueConstraint(
+            "buyer_id", "property_id", name="uq_saved_property_buyer_property"
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    buyer_id = db.Column(
+        db.Integer,
+        db.ForeignKey("buyers.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    property_id = db.Column(
+        db.Integer,
+        db.ForeignKey("properties.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    saved_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    buyer = db.relationship("Buyer", back_populates="saved_properties")
+    property = db.relationship("Property", back_populates="saved_properties")
+
+
 property_amenities = db.Table(
     "property_amenities",
     db.Column(
@@ -193,6 +223,13 @@ class Property(db.Model):
         secondary=property_features,
         back_populates="properties",
         lazy="selectin",
+    )
+
+    saved_properties = db.relationship(
+        "SavedProperty",
+        back_populates="property",
+        cascade="all, delete-orphan",
+        order_by="SavedProperty.saved_at.desc()",
     )
 
     seller = db.relationship("Seller", backref="properties")
