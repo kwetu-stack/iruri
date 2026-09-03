@@ -75,6 +75,8 @@ PERMISSION_GROUPS = {
         "roles.manage",
         "audit.view",
         "backup.manage",
+        "email_templates.view",
+        "email_templates.manage",
     ),
     "Marketplace": (
         "marketplace.view",

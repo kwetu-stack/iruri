@@ -1,0 +1,5 @@
+{% extends "layouts/dashboard.html" %}
+{% block title %}Preview {{ template.template_name }} | IRURI{% endblock %}
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center mb-4"><div><h2>Preview: {{ template.template_name }}</h2><p class="text-muted mb-0">Sample values are shown for preview only.</p></div><a class="btn btn-outline-secondary" href="{{ url_for('admin.email_template_detail', template_id=template.id) }}">Back</a></div><div class="mb-4"><h5>Subject</h5><div class="bg-white border rounded p-3">{{ subject }}</div></div><div class="mb-4"><h5>HTML Version</h5><div class="bg-white border rounded p-3">{{ body_html|safe }}</div></div><div><h5>Plain Text Version</h5><pre class="bg-white border rounded p-3">{{ body_text }}</pre></div>
+{% endblock %}

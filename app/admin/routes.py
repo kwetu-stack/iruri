@@ -4,11 +4,14 @@ from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.admin import admin
+from app.admin.email_templates import EMAIL_TEMPLATE_CATEGORIES, EmailTemplate
 from app.admin.models import SystemSetting
 from app.admin.roles import PERMISSION_GROUPS, Permission, Role
 from app.extensions import db
 from app.audit.service import record_audit
 from app.notifications.service import administrator_users, notify_users
+from app.utils.permissions import require_permission
+import re
 
 CATEGORIES = (
     "General",
@@ -185,6 +188,233 @@ def settings_index():
         categories=CATEGORIES,
         selected_category=category,
         search=search,
+    )
+
+
+def _template_form_values(template=None):
+    return {
+        "template_key": request.form.get(
+            "template_key", template.template_key if template else ""
+        ).strip(),
+        "template_name": request.form.get(
+            "template_name", template.template_name if template else ""
+        ).strip(),
+        "category": request.form.get(
+            "category", template.category if template else ""
+        ).strip(),
+        "subject": request.form.get(
+            "subject", template.subject if template else ""
+        ).strip(),
+        "body_html": request.form.get(
+            "body_html", template.body_html if template else ""
+        ),
+        "body_text": request.form.get(
+            "body_text", template.body_text if template else ""
+        ),
+        "description": request.form.get(
+            "description", template.description if template else ""
+        ).strip(),
+        "is_active": bool(request.form.get("is_active")),
+    }
+
+
+def _validate_template(values, template=None):
+    errors = []
+    if not values["template_key"] or not values["template_name"]:
+        errors.append("Template key and name are required.")
+    if values["category"] not in EMAIL_TEMPLATE_CATEGORIES:
+        errors.append("Choose a valid category.")
+    if not values["subject"]:
+        errors.append("Subject is required.")
+    if not values["body_html"].strip():
+        errors.append("HTML body is required.")
+    duplicate = EmailTemplate.query.filter_by(
+        template_key=values["template_key"]
+    ).first()
+    if duplicate and (template is None or duplicate.id != template.id):
+        errors.append("A template with that key already exists.")
+    return errors
+
+
+@admin.route("/email-templates")
+@admin.route("/email-templates/", strict_slashes=False)
+@require_permission("email_templates.view")
+def email_templates_index():
+    category = request.args.get("category", "").strip()
+    status = request.args.get("status", "").strip()
+    search = request.args.get("search", "").strip()
+    query = EmailTemplate.query
+    if category in EMAIL_TEMPLATE_CATEGORIES:
+        query = query.filter_by(category=category)
+    if status == "active":
+        query = query.filter_by(is_active=True)
+    elif status == "inactive":
+        query = query.filter_by(is_active=False)
+    elif status == "system":
+        query = query.filter_by(is_system_template=True)
+    if search:
+        query = query.filter(
+            db.or_(
+                EmailTemplate.template_name.ilike(f"%{search}%"),
+                EmailTemplate.template_key.ilike(f"%{search}%"),
+                EmailTemplate.subject.ilike(f"%{search}%"),
+            )
+        )
+    return render_template(
+        "admin/email_templates/index.html",
+        templates=query.order_by(
+            EmailTemplate.category, EmailTemplate.template_name
+        ).all(),
+        categories=EMAIL_TEMPLATE_CATEGORIES,
+        selected_category=category,
+        status=status,
+        search=search,
+    )
+
+
+@admin.route("/email-templates/new", methods=["GET", "POST"])
+@require_permission("email_templates.manage")
+def email_template_create():
+    values = _template_form_values()
+    if request.method == "POST":
+        errors = _validate_template(values)
+        if errors:
+            for error in errors:
+                flash(error, "danger")
+        else:
+            template = EmailTemplate(**values, is_system_template=False)
+            db.session.add(template)
+            db.session.commit()
+            flash("Email template created.", "success")
+            return redirect(
+                url_for("admin.email_template_detail", template_id=template.id)
+            )
+    return render_template(
+        "admin/email_templates/form.html",
+        template=None,
+        values=values,
+        categories=EMAIL_TEMPLATE_CATEGORIES,
+    )
+
+
+@admin.route("/email-templates/<int:template_id>")
+@require_permission("email_templates.view")
+def email_template_detail(template_id):
+    return render_template(
+        "admin/email_templates/detail.html",
+        template=EmailTemplate.query.get_or_404(template_id),
+    )
+
+
+@admin.route("/email-templates/<int:template_id>/edit", methods=["GET", "POST"])
+@require_permission("email_templates.manage")
+def email_template_edit(template_id):
+    template = EmailTemplate.query.get_or_404(template_id)
+    values = _template_form_values(template)
+    if request.method == "POST":
+        errors = _validate_template(values, template)
+        if errors:
+            for error in errors:
+                flash(error, "danger")
+        else:
+            for field, value in values.items():
+                setattr(template, field, value)
+            db.session.commit()
+            flash("Email template updated.", "success")
+            return redirect(
+                url_for("admin.email_template_detail", template_id=template.id)
+            )
+    return render_template(
+        "admin/email_templates/form.html",
+        template=template,
+        values=values,
+        categories=EMAIL_TEMPLATE_CATEGORIES,
+    )
+
+
+@admin.route("/email-templates/<int:template_id>/duplicate", methods=["POST"])
+@require_permission("email_templates.manage")
+def email_template_duplicate(template_id):
+    template = EmailTemplate.query.get_or_404(template_id)
+    base_key = f"{template.template_key}_copy"
+    key = base_key
+    suffix = 2
+    while EmailTemplate.query.filter_by(template_key=key).first():
+        key = f"{base_key}_{suffix}"
+        suffix += 1
+    duplicate = EmailTemplate(
+        template_key=key,
+        template_name=f"{template.template_name} Copy",
+        category=template.category,
+        subject=template.subject,
+        body_html=template.body_html,
+        body_text=template.body_text,
+        description=template.description,
+        is_active=template.is_active,
+        is_system_template=False,
+    )
+    db.session.add(duplicate)
+    db.session.commit()
+    flash("Email template duplicated.", "success")
+    return redirect(url_for("admin.email_template_edit", template_id=duplicate.id))
+
+
+@admin.route("/email-templates/<int:template_id>/toggle", methods=["POST"])
+@require_permission("email_templates.manage")
+def email_template_toggle(template_id):
+    template = EmailTemplate.query.get_or_404(template_id)
+    template.is_active = not template.is_active
+    db.session.commit()
+    flash("Email template status updated.", "success")
+    return redirect(url_for("admin.email_templates_index"))
+
+
+@admin.route("/email-templates/<int:template_id>/delete", methods=["POST"])
+@require_permission("email_templates.manage")
+def email_template_delete(template_id):
+    template = EmailTemplate.query.get_or_404(template_id)
+    if template.is_system_template:
+        abort(403)
+    db.session.delete(template)
+    db.session.commit()
+    flash("Email template deleted.", "success")
+    return redirect(url_for("admin.email_templates_index"))
+
+
+@admin.route("/email-templates/<int:template_id>/preview")
+@require_permission("email_templates.view")
+def email_template_preview(template_id):
+    template = EmailTemplate.query.get_or_404(template_id)
+    samples = {
+        variable: variable.replace("_", " ").title()
+        for variable in (
+            "first_name",
+            "last_name",
+            "full_name",
+            "property_name",
+            "property_reference",
+            "transaction_number",
+            "reservation_number",
+            "offer_number",
+            "payment_amount",
+            "company_name",
+            "current_date",
+        )
+    }
+
+    def replace_variables(value):
+        return re.sub(
+            r"{{\\s*([a-zA-Z_][a-zA-Z0-9_]*)\\s*}}",
+            lambda match: samples.get(match.group(1), match.group(0)),
+            value or "",
+        )
+
+    return render_template(
+        "admin/email_templates/preview.html",
+        template=template,
+        subject=replace_variables(template.subject),
+        body_html=replace_variables(template.body_html),
+        body_text=replace_variables(template.body_text),
     )
 
 

@@ -4,6 +4,7 @@ admin = Blueprint("admin", __name__, url_prefix="/admin")
 
 
 from app.admin.models import SystemSetting
+from app.admin.email_templates import EmailTemplate, seed_default_email_templates
 from app.admin.roles import Permission, Role, seed_default_roles_and_permissions
 
 # Import routes after the blueprint and model are available.

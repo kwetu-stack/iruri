@@ -18,7 +18,7 @@ from app.offers import offers
 from app.reservations import reservations
 from app.sale_agreements import sale_agreements
 from app.transactions import transactions
-from app.admin import admin, seed_default_settings
+from app.admin import admin, seed_default_email_templates, seed_default_settings
 from app.admin.roles import seed_default_roles_and_permissions
 from app.audit import audit
 from app.notifications import notifications
@@ -26,6 +26,7 @@ from app.properties.models import Amenity
 
 import app.models
 import app.admin.models
+import app.admin.email_templates
 import app.admin.roles
 import app.audit.models
 import app.notifications.models
@@ -96,5 +97,6 @@ def create_app():
         seed_default_features()
         seed_default_settings()
         seed_default_roles_and_permissions()
+        seed_default_email_templates()
 
     return app
