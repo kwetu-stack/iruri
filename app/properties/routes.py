@@ -1,6 +1,8 @@
 import os
 import re
 import uuid
+from datetime import datetime
+from urllib.parse import urlparse
 
 from flask import (
     current_app,
@@ -28,6 +30,7 @@ from app.properties.models import (
     PropertyDocument,
     PropertyFeature,
     PropertyFloorPlan,
+    PropertyVideo,
 )
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
@@ -36,6 +39,8 @@ ALLOWED_DOCUMENT_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
 MAX_DOCUMENT_SIZE = 20 * 1024 * 1024
 ALLOWED_FLOOR_PLAN_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
 MAX_FLOOR_PLAN_SIZE = 20 * 1024 * 1024
+ALLOWED_VIDEO_EXTENSIONS = {"mp4", "webm", "mov"}
+MAX_VIDEO_SIZE = 100 * 1024 * 1024
 DOCUMENT_TYPES = (
     "Title Deed",
     "Lease Agreement",
@@ -118,6 +123,23 @@ def _has_allowed_floor_plan_extension(filename):
         "." in filename
         and filename.rsplit(".", 1)[1].lower() in ALLOWED_FLOOR_PLAN_EXTENSIONS
     )
+
+
+def _has_allowed_video_extension(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_VIDEO_EXTENSIONS
+    )
+
+
+def _is_supported_external_url(value):
+    parsed = urlparse(value)
+    hostname = (parsed.hostname or "").lower().removeprefix("www.")
+    return parsed.scheme == "https" and hostname in {
+        "youtube.com",
+        "youtu.be",
+        "vimeo.com",
+    }
 
 
 def _sanitize_floor_name(value):
@@ -326,6 +348,113 @@ def details(id):
         "properties/details.html",
         property=property,
     )
+
+
+def _video_upload_folder():
+    folder = os.path.join(current_app.root_path, "static", "uploads", "property_videos")
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
+@properties.route("/<int:id>/videos/upload", methods=["GET", "POST"])
+@login_required
+def upload_video(id):
+    property = Property.query.get_or_404(id)
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        description = request.form.get("description", "").strip() or None
+        video_type = request.form.get("video_type", "").strip()
+        uploaded_file = request.files.get("file")
+        external_url = request.form.get("external_url", "").strip()
+
+        if not title:
+            flash("Video title is required.", "danger")
+        elif video_type not in {"upload", "external"}:
+            flash("Select a valid video type.", "danger")
+        elif video_type == "upload" and (
+            not uploaded_file or not uploaded_file.filename
+        ):
+            flash("Select a video file to upload.", "danger")
+        elif video_type == "upload" and not _has_allowed_video_extension(
+            uploaded_file.filename
+        ):
+            flash("Only MP4, WEBM, and MOV videos are allowed.", "danger")
+        elif video_type == "upload" and _file_size(uploaded_file) > MAX_VIDEO_SIZE:
+            flash("Videos must be 100 MB or smaller.", "danger")
+        elif video_type == "external" and not _is_supported_external_url(external_url):
+            flash("Enter a valid HTTPS YouTube or Vimeo URL.", "danger")
+        else:
+            next_order = (
+                db.session.query(db.func.max(PropertyVideo.display_order))
+                .filter_by(property_id=property.id)
+                .scalar()
+                or 0
+            ) + 1
+            saved_path = None
+            file_name = None
+            file_path = None
+
+            if video_type == "upload":
+                original_filename = secure_filename(uploaded_file.filename)
+                extension = original_filename.rsplit(".", 1)[1].lower()
+                timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+                property_number = secure_filename(property.listing_number) or "property"
+                file_name = f"{property_number}_{timestamp}.{extension}"
+                saved_path = os.path.join(_video_upload_folder(), file_name)
+                uploaded_file.save(saved_path)
+                file_path = os.path.join("uploads", "property_videos", file_name)
+
+            video = PropertyVideo(
+                property_id=property.id,
+                title=title,
+                description=description,
+                video_type=video_type,
+                file_name=file_name,
+                file_path=file_path,
+                external_url=external_url if video_type == "external" else None,
+                display_order=next_order,
+            )
+            try:
+                db.session.add(video)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                if saved_path and os.path.exists(saved_path):
+                    os.remove(saved_path)
+                raise
+
+            flash("Property video saved successfully.", "success")
+            return redirect(url_for("properties.details", id=property.id))
+
+    return render_template("property_videos/upload.html", property=property)
+
+
+@properties.route("/videos/<int:id>/watch")
+@login_required
+def watch_video(id):
+    video = PropertyVideo.query.get_or_404(id)
+    if video.video_type == "external":
+        return redirect(video.external_url)
+    return send_from_directory(_video_upload_folder(), video.file_name)
+
+
+@properties.route("/videos/<int:id>/delete", methods=["POST"])
+@login_required
+def delete_video(id):
+    video = PropertyVideo.query.get_or_404(id)
+    property_id = video.property_id
+    file_path = (
+        os.path.join(_video_upload_folder(), video.file_name)
+        if video.video_type == "upload" and video.file_name
+        else None
+    )
+    db.session.delete(video)
+    db.session.commit()
+    if file_path and os.path.exists(file_path):
+        os.remove(file_path)
+    flash("Property video deleted successfully.", "success")
+    return redirect(url_for("properties.details", id=property_id))
 
 
 def _document_form_context(property=None):

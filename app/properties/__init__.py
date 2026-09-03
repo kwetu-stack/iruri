@@ -12,6 +12,7 @@ from app.properties.models import (
     PropertyDocument,
     PropertyFeature,
     PropertyFloorPlan,
+    PropertyVideo,
 )
 from app.properties.image_models import PropertyImage
 

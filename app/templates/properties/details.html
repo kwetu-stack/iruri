@@ -130,6 +130,54 @@
     {% endif %}
 </div>
 
+<div class="mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h5 class="mb-0">Property Videos</h5>
+        <a href="{{ url_for('properties.upload_video', id=property.id) }}" class="btn btn-sm btn-outline-primary">
+            Add Video
+        </a>
+    </div>
+
+    {% if property.videos %}
+    <div class="row g-3">
+        {% for video in property.videos %}
+        <div class="col-md-6 col-xl-4">
+            <div class="card h-100 shadow-sm border-0">
+                {% if video.thumbnail %}
+                <img src="{{ url_for('static', filename=video.thumbnail) }}" class="card-img-top" alt="{{ video.title }}" style="height: 190px; object-fit: cover;">
+                {% elif video.video_type == 'upload' %}
+                <video class="w-100 bg-dark" style="height: 190px; object-fit: cover;" controls preload="metadata">
+                    <source src="{{ url_for('properties.watch_video', id=video.id) }}">
+                </video>
+                {% else %}
+                <div class="d-flex align-items-center justify-content-center bg-light" style="height: 190px;">
+                    <i class="bi bi-play-btn fs-1 text-primary" aria-hidden="true"></i>
+                </div>
+                {% endif %}
+                <div class="card-body">
+                    <h6 class="mb-1">{{ video.title }}</h6>
+                    {% if video.description %}
+                    <p class="small text-muted mb-2">{{ video.description }}</p>
+                    {% endif %}
+                    <p class="small text-muted mb-3">{{ 'Uploaded' if video.video_type == 'upload' else 'External link' }}</p>
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('properties.watch_video', id=video.id) }}" class="btn btn-sm btn-outline-primary flex-fill" {% if video.video_type == 'external' %}target="_blank" rel="noopener noreferrer"{% endif %}>Watch</a>
+                        <form method="POST" action="{{ url_for('properties.delete_video', id=video.id) }}" class="d-inline" onsubmit="return confirm('Delete this video?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card border-secondary-subtle">
+        <div class="card-body text-center text-muted">No property videos added.</div>
+    </div>
+    {% endif %}
+</div>
+
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
 
     <div>

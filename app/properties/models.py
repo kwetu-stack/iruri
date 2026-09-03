@@ -161,6 +161,14 @@ class Property(db.Model):
         cascade="all, delete-orphan",
     )
 
+    videos = db.relationship(
+        "PropertyVideo",
+        back_populates="property",
+        lazy=True,
+        cascade="all, delete-orphan",
+        order_by="PropertyVideo.display_order.asc()",
+    )
+
     amenities = db.relationship(
         "Amenity",
         secondary=property_amenities,
@@ -231,3 +239,28 @@ class PropertyDocument(db.Model):
     notes = db.Column(db.Text, nullable=True)
 
     property = db.relationship("Property", back_populates="documents")
+
+
+class PropertyVideo(db.Model):
+    """An uploaded or externally hosted video for a property listing."""
+
+    __tablename__ = "property_videos"
+
+    id = db.Column(db.Integer, primary_key=True)
+    property_id = db.Column(
+        db.Integer,
+        db.ForeignKey("properties.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    video_type = db.Column(db.String(20), nullable=False)
+    file_name = db.Column(db.String(255), nullable=True)
+    file_path = db.Column(db.String(500), nullable=True)
+    external_url = db.Column(db.String(500), nullable=True)
+    thumbnail = db.Column(db.String(500), nullable=True)
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    property = db.relationship("Property", back_populates="videos")
