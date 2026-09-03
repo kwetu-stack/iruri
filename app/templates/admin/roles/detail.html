@@ -1,0 +1,9 @@
+{% extends "layouts/dashboard.html" %}
+{% block title %}{{ role.name }} | IRURI{% endblock %}
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-start mb-4"><div><p class="text-muted mb-1">Role details</p><h2>{{ role.name }}</h2><p class="mb-0">{{ role.description or "No description" }}</p></div><a class="btn btn-primary" href="{{ url_for('admin.role_edit', role_id=role.id) }}">Edit role</a></div>
+<form method="post" action="{{ url_for('admin.role_permissions_edit', role_id=role.id) }}">
+{% for module, permissions in grouped_permissions.items() %}<div class="card shadow-sm border-0 mb-3"><div class="card-body"><h5>{{ module }}</h5><div class="row">{% for permission in permissions %}<div class="col-md-3 mb-2"><div class="form-check"><input class="form-check-input" type="checkbox" name="permission_keys" value="{{ permission.permission_key }}" id="permission-{{ permission.id }}" {% if permission in role.permissions %}checked{% endif %}><label class="form-check-label" for="permission-{{ permission.id }}">{{ permission.permission_key.rsplit('.', 1)[-1]|title }}</label></div></div>{% endfor %}</div></div></div>{% endfor %}
+<button class="btn btn-primary" type="submit">Save permissions</button> <a class="btn btn-outline-secondary" href="{{ url_for('admin.roles_index') }}">Back to roles</a>
+</form>
+{% endblock %}

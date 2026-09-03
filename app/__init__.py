@@ -19,10 +19,12 @@ from app.reservations import reservations
 from app.sale_agreements import sale_agreements
 from app.transactions import transactions
 from app.admin import admin, seed_default_settings
+from app.admin.roles import seed_default_roles_and_permissions
 from app.properties.models import Amenity
 
 import app.models
 import app.admin.models
+import app.admin.roles
 
 
 def create_app():
@@ -87,5 +89,6 @@ def create_app():
         seed_default_amenities()
         seed_default_features()
         seed_default_settings()
+        seed_default_roles_and_permissions()
 
     return app

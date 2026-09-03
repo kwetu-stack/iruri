@@ -21,24 +21,17 @@ class User(UserMixin, db.Model):
 
     password_hash = db.Column(db.String(255), nullable=False)
 
-    role = db.Column(
-        db.String(50),
-        nullable=False,
-        default="Buyer"
-    )
+    role = db.Column(db.String(50), nullable=False, default="Buyer")
+    role_id = db.Column(db.Integer, db.ForeignKey("roles.id"), nullable=True)
+    role_record = db.relationship("Role", back_populates="users")
 
     is_verified = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow
-    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     updated_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
     last_login = db.Column(db.DateTime)
@@ -47,10 +40,12 @@ class User(UserMixin, db.Model):
         self.password_hash = generate_password_hash(password)
 
     def check_password(self, password):
-        return check_password_hash(
-            self.password_hash,
-            password
-        )
+        return check_password_hash(self.password_hash, password)
+
+    def has_permission(self, permission_key):
+        from app.admin.roles import has_permission
+
+        return has_permission(self, permission_key)
 
     def __repr__(self):
         return f"<User {self.email}>"

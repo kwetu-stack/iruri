@@ -5,6 +5,7 @@ from flask_login import current_user, login_required
 
 from app.admin import admin
 from app.admin.models import SystemSetting
+from app.admin.roles import PERMISSION_GROUPS, Permission, Role
 from app.extensions import db
 
 CATEGORIES = (
@@ -26,11 +27,128 @@ def admin_required(view):
         if (getattr(current_user, "role", "") or "").lower() not in {
             "admin",
             "administrator",
+        } and getattr(getattr(current_user, "role_record", None), "name", "") not in {
+            "Administrator",
+            "Super Administrator",
         }:
             abort(403)
         return view(*args, **kwargs)
 
     return wrapped
+
+
+def roles_admin_required(view):
+    @wraps(view)
+    @login_required
+    def wrapped(*args, **kwargs):
+        if (getattr(current_user, "role", "") or "").lower() not in {
+            "admin",
+            "administrator",
+            "super administrator",
+        } and not (
+            getattr(getattr(current_user, "role_record", None), "name", "")
+            in {"Administrator", "Super Administrator"}
+        ):
+            abort(403)
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+@admin.route("/roles")
+@admin.route("/roles/", strict_slashes=False)
+@roles_admin_required
+def roles_index():
+    roles = Role.query.order_by(Role.name).all()
+    return render_template("admin/roles/index.html", roles=roles)
+
+
+@admin.route("/roles/new", methods=["GET", "POST"])
+@roles_admin_required
+def role_create():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Role name is required.", "danger")
+        elif Role.query.filter_by(name=name).first():
+            flash("A role with that name already exists.", "danger")
+        else:
+            role = Role(
+                name=name, description=request.form.get("description", "").strip()
+            )
+            db.session.add(role)
+            db.session.commit()
+            flash("Role created.", "success")
+            return redirect(url_for("admin.role_detail", role_id=role.id))
+    return render_template("admin/roles/form.html", role=None)
+
+
+@admin.route("/roles/<int:role_id>")
+@roles_admin_required
+def role_detail(role_id):
+    role = Role.query.get_or_404(role_id)
+    grouped_permissions = {
+        module: Permission.query.filter(Permission.module == module)
+        .order_by(Permission.permission_key)
+        .all()
+        for module in PERMISSION_GROUPS
+    }
+    return render_template(
+        "admin/roles/detail.html", role=role, grouped_permissions=grouped_permissions
+    )
+
+
+@admin.route("/roles/<int:role_id>/edit", methods=["GET", "POST"])
+@roles_admin_required
+def role_edit(role_id):
+    role = Role.query.get_or_404(role_id)
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        duplicate = Role.query.filter(Role.name == name, Role.id != role.id).first()
+        if not name or duplicate:
+            flash("Role name is required and must be unique.", "danger")
+        elif role.name == "Super Administrator" and (
+            name != role.name or not request.form.get("is_active")
+        ):
+            flash(
+                "The Super Administrator role cannot be renamed or disabled.", "danger"
+            )
+        else:
+            role.name = name
+            role.description = request.form.get("description", "").strip()
+            role.is_active = bool(request.form.get("is_active"))
+            db.session.commit()
+            flash("Role updated.", "success")
+            return redirect(url_for("admin.role_detail", role_id=role.id))
+    return render_template("admin/roles/form.html", role=role)
+
+
+@admin.route("/roles/<int:role_id>/permissions", methods=["POST"])
+@roles_admin_required
+def role_permissions_edit(role_id):
+    role = Role.query.get_or_404(role_id)
+    keys = set(request.form.getlist("permission_keys"))
+    role.permissions = Permission.query.filter(
+        Permission.permission_key.in_(keys)
+    ).all()
+    db.session.commit()
+    flash("Permissions updated.", "success")
+    return redirect(url_for("admin.role_detail", role_id=role.id))
+
+
+@admin.route("/permissions")
+@admin.route("/permissions/", strict_slashes=False)
+@roles_admin_required
+def permissions_index():
+    grouped_permissions = {
+        module: Permission.query.filter_by(module=module)
+        .order_by(Permission.permission_key)
+        .all()
+        for module in PERMISSION_GROUPS
+    }
+    return render_template(
+        "admin/roles/permissions.html", grouped_permissions=grouped_permissions
+    )
 
 
 @admin.route("/settings")
