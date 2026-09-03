@@ -218,7 +218,7 @@
     <div class="card-body">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
             <h5 class="card-title mb-0">Offers</h5>
-            <div class="d-flex gap-2"><span class="badge bg-secondary">{{ property.offers|length }} Total</span><span class="badge bg-warning text-dark">{{ offer_counts['Pending'] }} Pending</span><span class="badge bg-success">{{ offer_counts['Accepted'] }} Accepted</span><span class="badge bg-danger">{{ offer_counts['Rejected'] }} Rejected</span></div>
+            <div class="d-flex flex-wrap gap-2"><span class="badge bg-secondary">{{ negotiation_count }} Negotiations</span><span class="badge bg-secondary">{{ property.offers|length }} Total Offers</span><span class="badge bg-info text-dark">{{ negotiation_count }} Counter Offers</span><span class="badge bg-success">{{ offer_counts['Accepted'] }} Accepted</span><span class="badge bg-danger">{{ offer_counts['Rejected'] }} Rejected</span></div>
         </div>
         {% if property.offers %}
         <div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Offer Number</th><th>Buyer</th><th>Amount</th><th>Status</th><th>Submitted Date</th><th>Assigned Agent</th><th></th></tr></thead><tbody>

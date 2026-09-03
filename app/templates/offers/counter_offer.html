@@ -1,0 +1,8 @@
+{% extends "layouts/dashboard.html" %}
+{% block title %}Counter Offer | IRURI{% endblock %}
+{% block dashboard_content %}
+<div class="row justify-content-center"><div class="col-lg-8"><div class="card shadow-sm"><div class="card-header"><h3 class="mb-0">Counter Offer {{ offer.offer_number }}</h3></div><div class="card-body">
+<p class="text-muted">Current offer: {{ offer.currency }} {{ "{:,.2f}".format(offer.offered_price) }}</p>
+<form method="POST"><div class="mb-3"><label class="form-label" for="offered_amount">Counter Amount</label><input id="offered_amount" name="offered_amount" type="number" min="0.01" step="0.01" class="form-control" required></div><div class="mb-3"><label class="form-label" for="message">Message</label><textarea id="message" name="message" class="form-control" rows="4"></textarea></div><button type="submit" class="btn btn-primary">Submit Counter Offer</button> <a href="{{ url_for('offers.review', id=offer.id) }}" class="btn btn-secondary">Cancel</a></form>
+</div></div></div></div>
+{% endblock %}

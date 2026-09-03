@@ -394,8 +394,15 @@ def details(id):
     )
     offer_counts = {
         status: sum(offer.status == status for offer in property.offers)
-        for status in ("Pending", "Accepted", "Rejected")
+        for status in (
+            "Pending",
+            "Under Review",
+            "Counter Offered",
+            "Accepted",
+            "Rejected",
+        )
     }
+    negotiation_count = sum(len(offer.negotiations) for offer in property.offers)
 
     return render_template(
         "properties/details.html",
@@ -403,6 +410,7 @@ def details(id):
         saved_property=saved_property,
         current_buyer=buyer,
         offer_counts=offer_counts,
+        negotiation_count=negotiation_count,
     )
 
 

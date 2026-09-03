@@ -13,8 +13,8 @@
 </div>
 <div class="card shadow-sm border-0 mb-4"><div class="card-body">
 	<div class="d-flex justify-content-between align-items-center mb-3"><h5 class="card-title mb-0">My Offers</h5><span class="badge bg-secondary">{{ buyer.offers|length }}</span></div>
-	{% if buyer.offers %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Offer No</th><th>Property</th><th>Offer Amount</th><th>Status</th><th>Date</th></tr></thead><tbody>
-	{% for offer in buyer.offers %}<tr><td>{{ offer.offer_number }}</td><td><a href="{{ url_for('properties.details', id=offer.property.id) }}">{{ offer.property.title }}</a></td><td>{{ offer.currency }} {{ "{:,.2f}".format(offer.offered_price) }}</td><td>{{ offer.status }}</td><td>{{ offer.submitted_at.strftime('%d %b %Y') }}</td></tr>{% endfor %}
+	{% if buyer.offers %}<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Offer No</th><th>Property</th><th>Current Offer</th><th>Status</th><th>Last Counter Amount</th><th>Last Updated</th><th>Action</th></tr></thead><tbody>
+	{% for offer in buyer.offers %}<tr><td>{{ offer.offer_number }}</td><td><a href="{{ url_for('properties.details', id=offer.property.id) }}">{{ offer.property.title }}</a></td><td>{{ offer.currency }} {{ "{:,.2f}".format(offer.offered_price) }}</td><td>{{ offer.status }}</td><td>{{ offer.negotiations[0].offered_amount if offer.negotiations else 'None' }}</td><td>{{ offer.updated_at.strftime('%d %b %Y %H:%M') }}</td><td><a href="{{ url_for('offers.review', id=offer.id) }}" class="btn btn-sm btn-outline-primary">Negotiation History</a></td></tr>{% endfor %}
 	</tbody></table></div>{% else %}<p class="text-muted mb-0">No offers submitted yet.</p>{% endif %}
 </div></div>
 <div class="card shadow-sm border-0 mb-4">
