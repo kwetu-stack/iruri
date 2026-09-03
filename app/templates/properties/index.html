@@ -93,9 +93,11 @@ Properties | IRURI™
                             Edit
                         </a>
 
-                        <button class="btn btn-sm btn-outline-danger">
+                        <a
+                            href="{{ url_for('properties.delete', id=property.id) }}"
+                            class="btn btn-sm btn-outline-danger">
                             Delete
-                        </button>
+                        </a>
 
                     </td>
 

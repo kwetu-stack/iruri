@@ -137,3 +137,19 @@ def edit(id):
         return redirect(url_for("properties.details", id=property.id))
 
     return render_template("properties/edit.html", property=property)
+
+
+@properties.route("/<int:id>/delete", methods=["GET", "POST"])
+@login_required
+def delete(id):
+
+    property = Property.query.get_or_404(id)
+
+    if request.method == "POST":
+        db.session.delete(property)
+        db.session.commit()
+
+        flash("Property deleted successfully.", "success")
+        return redirect(url_for("properties.index"))
+
+    return render_template("properties/delete.html", property=property)
