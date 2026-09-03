@@ -21,6 +21,7 @@ from app.sellers.models import Seller
 from app.developers.models import Developer
 from app.agents.models import Agent
 from app.buyers.models import Buyer
+from app.audit.service import record_audit
 
 
 from app.extensions import db
@@ -250,6 +251,13 @@ def amenities_create():
             )
         )
         db.session.commit()
+        record_audit(
+            "Create",
+            "Marketplace",
+            f"Property {property.listing_number} created",
+            "Property",
+            property.id,
+        )
         flash("Amenity created successfully.", "success")
         return redirect(url_for("properties.amenities_index"))
 
@@ -276,6 +284,13 @@ def amenities_edit(id):
         amenity.icon = request.form.get("icon", "").strip() or None
         amenity.category = request.form.get("category", "").strip() or None
         db.session.commit()
+        record_audit(
+            "Update",
+            "Marketplace",
+            f"Property {property.listing_number} updated",
+            "Property",
+            property.id,
+        )
         flash("Amenity updated successfully.", "success")
         return redirect(url_for("properties.amenities_index"))
 
@@ -1107,6 +1122,13 @@ def delete(id):
     if request.method == "POST":
         db.session.delete(property)
         db.session.commit()
+        record_audit(
+            "Delete",
+            "Marketplace",
+            f"Property {property.listing_number} deleted",
+            "Property",
+            property.id,
+        )
 
         flash("Property deleted successfully.", "success")
         return redirect(url_for("properties.index"))

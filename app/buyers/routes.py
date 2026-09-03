@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 from app.buyers import buyers
 from app.buyers.models import Buyer
 from app.extensions import db
+from app.audit.service import record_audit
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
@@ -165,6 +166,13 @@ def create():
         db.session.flush()
         buyer.buyer_number = f"BUY-{datetime.utcnow().year}-{buyer.id:06d}"
         db.session.commit()
+        record_audit(
+            "Create",
+            "Marketplace",
+            f"Buyer {buyer.buyer_number} created",
+            "Buyer",
+            buyer.id,
+        )
         flash("Buyer added successfully.", "success")
         return redirect(url_for("buyers.index"))
     return render_template("buyers/create.html", buyer_types=BUYER_TYPES)
@@ -199,6 +207,13 @@ def edit(id):
         for field, value in values.items():
             setattr(buyer, field, value)
         db.session.commit()
+        record_audit(
+            "Update",
+            "Marketplace",
+            f"Buyer {buyer.buyer_number} updated",
+            "Buyer",
+            buyer.id,
+        )
         if uploaded_file and uploaded_file.filename:
             _remove_photo(old_photo)
         flash("Buyer updated successfully.", "success")
@@ -214,6 +229,13 @@ def delete(id):
         photo = buyer.profile_photo
         db.session.delete(buyer)
         db.session.commit()
+        record_audit(
+            "Delete",
+            "Marketplace",
+            f"Buyer {buyer.buyer_number} deleted",
+            "Buyer",
+            buyer.id,
+        )
         _remove_photo(photo)
         flash("Buyer deleted successfully.", "success")
         return redirect(url_for("buyers.index"))

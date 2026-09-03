@@ -7,6 +7,7 @@ from app.admin import admin
 from app.admin.models import SystemSetting
 from app.admin.roles import PERMISSION_GROUPS, Permission, Role
 from app.extensions import db
+from app.audit.service import record_audit
 
 CATEGORIES = (
     "General",
@@ -78,6 +79,13 @@ def role_create():
             )
             db.session.add(role)
             db.session.commit()
+            record_audit(
+                "Create",
+                "Administration",
+                f"Role {role.name} created",
+                "Role",
+                role.id,
+            )
             flash("Role created.", "success")
             return redirect(url_for("admin.role_detail", role_id=role.id))
     return render_template("admin/roles/form.html", role=None)
@@ -132,6 +140,13 @@ def role_permissions_edit(role_id):
         Permission.permission_key.in_(keys)
     ).all()
     db.session.commit()
+    record_audit(
+        "Permission Change",
+        "Administration",
+        f"Permissions updated for role {role.name}",
+        "Role",
+        role.id,
+    )
     flash("Permissions updated.", "success")
     return redirect(url_for("admin.role_detail", role_id=role.id))
 
@@ -187,6 +202,7 @@ def setting_edit(setting_id):
         abort(403)
     if request.method == "POST":
         try:
+            old_value = setting.setting_value
             setting.setting_value = setting.validate_value(
                 request.form.get("setting_value", "")
             )
@@ -195,6 +211,13 @@ def setting_edit(setting_id):
             db.session.rollback()
             flash(f"Invalid value: {error}.", "danger")
         else:
+            record_audit(
+                "System Setting Change",
+                "Administration",
+                f"Setting {setting.setting_key} changed from {old_value} to {setting.setting_value}",
+                "System Setting",
+                setting.id,
+            )
             flash("Setting updated.", "success")
             return redirect(url_for("admin.setting_detail", setting_id=setting.id))
     return render_template("admin/settings/edit.html", setting=setting)

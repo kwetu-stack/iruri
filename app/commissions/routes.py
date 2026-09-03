@@ -14,6 +14,7 @@ from app.commissions.models import (
     PropertyCommission,
 )
 from app.extensions import db
+from app.audit.service import record_audit
 from app.sale_agreements.models import SaleAgreement
 
 
@@ -144,6 +145,13 @@ def create(agreement_id):
                 f"COM-{datetime.utcnow().year}-{commission.id:06d}"
             )
             db.session.commit()
+            record_audit(
+                "Create",
+                "Transactions",
+                f"Commission {commission.commission_number} generated",
+                "Commission",
+                commission.id,
+            )
             flash("Commission generated successfully.", "success")
             return redirect(url_for("commissions.details", id=commission.id))
         flash(error, "danger")
@@ -245,6 +253,13 @@ def payment_create(id):
             db.session.flush()
             commission.recalculate()
             db.session.commit()
+            record_audit(
+                "Create",
+                "Transactions",
+                "Commission payment recorded",
+                "Commission Payment",
+                commission.id,
+            )
             flash("Commission payment recorded successfully.", "success")
             return redirect(url_for("commissions.details", id=id))
         flash(error, "danger")

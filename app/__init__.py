@@ -20,11 +20,13 @@ from app.sale_agreements import sale_agreements
 from app.transactions import transactions
 from app.admin import admin, seed_default_settings
 from app.admin.roles import seed_default_roles_and_permissions
+from app.audit import audit
 from app.properties.models import Amenity
 
 import app.models
 import app.admin.models
 import app.admin.roles
+import app.audit.models
 
 
 def create_app():
@@ -84,6 +86,7 @@ def create_app():
     app.register_blueprint(sale_agreements)
     app.register_blueprint(transactions)
     app.register_blueprint(admin)
+    app.register_blueprint(audit)
 
     with app.app_context():
         seed_default_amenities()

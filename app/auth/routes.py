@@ -10,6 +10,7 @@ from flask_login import current_user, login_user, logout_user, login_required
 
 from app.auth import auth
 from app.auth.models import User
+from app.audit.service import record_audit
 
 
 @auth.route("/login", methods=["GET", "POST"])
@@ -25,11 +26,26 @@ def login():
         if user and user.check_password(password):
 
             login_user(user)
+            record_audit(
+                "Login",
+                "Authentication",
+                "User logged in successfully",
+                "User",
+                user.id,
+            )
 
             flash("Welcome back!", "success")
 
             return redirect(url_for("dashboard.index"))
 
+        record_audit(
+            "Failed Login",
+            "Authentication",
+            "Failed login attempt",
+            "User",
+            user.id if user else None,
+            status="Failed",
+        )
         flash("Invalid email or password.", "danger")
 
     return render_template("auth/login.html")
@@ -38,7 +54,7 @@ def login():
 @auth.route("/logout")
 @login_required
 def logout():
-
+    record_audit("Logout", "Authentication", "User logged out", "User", current_user.id)
     logout_user()
 
     flash("You have been logged out.", "info")

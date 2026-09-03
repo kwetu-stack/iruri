@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 from app.agents import agents
 from app.agents.models import Agent
 from app.extensions import db
+from app.audit.service import record_audit
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
@@ -122,6 +123,13 @@ def create():
         db.session.flush()
         agent.agent_number = f"AGT-2026-{agent.id:06d}"
         db.session.commit()
+        record_audit(
+            "Create",
+            "Marketplace",
+            f"Agent {agent.agent_number} created",
+            "Agent",
+            agent.id,
+        )
         flash("Agent added successfully.", "success")
         return redirect(url_for("agents.index"))
     return render_template("agents/create.html")
@@ -163,6 +171,13 @@ def edit(id):
         for field, value in values.items():
             setattr(agent, field, value)
         db.session.commit()
+        record_audit(
+            "Update",
+            "Marketplace",
+            f"Agent {agent.agent_number} updated",
+            "Agent",
+            agent.id,
+        )
         if uploaded_file and uploaded_file.filename:
             _remove_photo(old_photo)
         flash("Agent updated successfully.", "success")
@@ -178,6 +193,13 @@ def delete(id):
         photo = agent.profile_photo
         db.session.delete(agent)
         db.session.commit()
+        record_audit(
+            "Delete",
+            "Marketplace",
+            f"Agent {agent.agent_number} deleted",
+            "Agent",
+            agent.id,
+        )
         _remove_photo(photo)
         flash("Agent deleted successfully.", "success")
         return redirect(url_for("agents.index"))

@@ -13,6 +13,7 @@ from app.sale_agreements.models import SaleAgreement
 from app.sellers.models import Seller
 from app.transactions import transactions
 from app.transactions.models import PropertyTransaction
+from app.audit.service import record_audit
 
 
 def _is_admin():
@@ -189,6 +190,13 @@ def complete(agreement_id):
                 db.session.rollback()
                 error = "This property already has a completed transaction."
             else:
+                record_audit(
+                    "Transaction Completion",
+                    "Transactions",
+                    f"Transaction {transaction.transaction_number} completed",
+                    "Transaction",
+                    transaction.id,
+                )
                 flash("Transaction completed successfully.", "success")
                 return redirect(url_for("transactions.details", id=transaction.id))
         flash(error, "danger")

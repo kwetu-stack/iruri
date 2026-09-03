@@ -16,6 +16,7 @@ from app.sale_agreements.models import (
     SaleAgreement,
 )
 from app.transactions.models import PropertyTransaction
+from app.audit.service import record_audit
 
 
 def _is_admin():
@@ -244,6 +245,13 @@ def create(reservation_id):
                 db.session.rollback()
                 error = "An active sale agreement already exists for this reservation."
             else:
+                record_audit(
+                    "Create",
+                    "Transactions",
+                    f"Sale agreement {agreement.agreement_number} created",
+                    "Sale Agreement",
+                    agreement.id,
+                )
                 flash("Sale agreement created successfully.", "success")
                 return redirect(url_for("sale_agreements.details", id=agreement.id))
         flash(error, "danger")
@@ -321,6 +329,13 @@ def payment_create(id):
             payment.payment_number = f"PAY-{datetime.utcnow().year}-{payment.id:06d}"
             _recalculate_agreement(agreement)
             db.session.commit()
+            record_audit(
+                "Create",
+                "Transactions",
+                f"Payment {payment.payment_number} recorded",
+                "Payment",
+                payment.id,
+            )
             flash("Payment recorded successfully.", "success")
             return redirect(url_for("sale_agreements.payment_details", id=payment.id))
         flash(error, "danger")
@@ -450,6 +465,13 @@ def complete(id):
         agreement.status = "Completed"
         agreement.property.status = "Ready for Transfer"
         db.session.commit()
+        record_audit(
+            "Transaction Completion",
+            "Transactions",
+            f"Sale agreement {agreement.agreement_number} completed",
+            "Sale Agreement",
+            agreement.id,
+        )
         flash("Sale agreement marked completed.", "success")
     return redirect(url_for("sale_agreements.details", id=id))
 

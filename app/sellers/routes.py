@@ -9,6 +9,7 @@ from werkzeug.utils import secure_filename
 from app.extensions import db
 from app.sellers import sellers
 from app.sellers.models import Seller
+from app.audit.service import record_audit
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
@@ -137,6 +138,13 @@ def create():
         db.session.flush()
         seller.seller_number = f"SEL-{datetime.utcnow().year}-{seller.id:06d}"
         db.session.commit()
+        record_audit(
+            "Create",
+            "Marketplace",
+            f"Seller {seller.seller_number} created",
+            "Seller",
+            seller.id,
+        )
         flash("Seller added successfully.", "success")
         return redirect(url_for("sellers.index"))
     return render_template("sellers/create.html", seller_types=SELLER_TYPES)
@@ -173,6 +181,13 @@ def edit(id):
         for field, value in values.items():
             setattr(seller, field, value)
         db.session.commit()
+        record_audit(
+            "Update",
+            "Marketplace",
+            f"Seller {seller.seller_number} updated",
+            "Seller",
+            seller.id,
+        )
         if uploaded_file and uploaded_file.filename:
             _remove_photo(old_photo)
         flash("Seller updated successfully.", "success")
@@ -190,6 +205,13 @@ def delete(id):
         photo = seller.profile_photo
         db.session.delete(seller)
         db.session.commit()
+        record_audit(
+            "Delete",
+            "Marketplace",
+            f"Seller {seller.seller_number} deleted",
+            "Seller",
+            seller.id,
+        )
         _remove_photo(photo)
         flash("Seller deleted successfully.", "success")
         return redirect(url_for("sellers.index"))

@@ -12,6 +12,7 @@ from app.offers.models import PropertyOffer
 from app.reservations import reservations
 from app.reservations.models import PropertyReservation
 from app.properties.models import Property
+from app.audit.service import record_audit
 
 
 def _is_admin():
@@ -177,6 +178,13 @@ def create(offer_id):
                 db.session.rollback()
                 flash("Property Already Reserved", "danger")
             else:
+                record_audit(
+                    "Create",
+                    "Transactions",
+                    f"Reservation {reservation.reservation_number} created",
+                    "Reservation",
+                    reservation.id,
+                )
                 flash("Reservation created successfully.", "success")
                 return redirect(url_for("reservations.details", id=reservation.id))
 
