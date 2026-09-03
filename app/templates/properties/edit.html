@@ -1,0 +1,120 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Edit Property | IRURI™{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="row justify-content-center">
+
+    <div class="col-lg-8">
+
+        <div class="card shadow-sm">
+
+            <div class="card-header">
+                <h3 class="mb-0">Edit Property</h3>
+            </div>
+
+            <div class="card-body">
+
+                <form method="POST">
+
+                    <div class="mb-3">
+                        <label class="form-label">Property Title</label>
+                        <input type="text" name="title" class="form-control" value="{{ request.form.get('title', property.title) }}" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea name="description" class="form-control" rows="5">{{ request.form.get('description', property.description or '') }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Property Type</label>
+                            <select name="property_type" class="form-select" required>
+                                <option value="">Select...</option>
+                                {% for option in ['House', 'Apartment', 'Villa', 'Maisonette', 'Land', 'Commercial'] %}
+                                <option value="{{ option }}" {% if request.form.get('property_type', property.property_type) == option %}selected{% endif %}>{{ option }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Listing Type</label>
+                            <select name="listing_type" class="form-select" required>
+                                {% for option in ['For Sale', 'For Rent', 'Short Stay'] %}
+                                <option value="{{ option }}" {% if request.form.get('listing_type', property.listing_type) == option %}selected{% endif %}>{{ option }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Price</label>
+                            <input type="number" step="any" name="price" class="form-control" value="{{ request.form.get('price', property.price) }}" required>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Currency</label>
+                            <input type="text" name="currency" class="form-control" value="{{ request.form.get('currency', property.currency or 'KES') }}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        {% for field, label in [('county', 'County'), ('town', 'Town'), ('estate', 'Estate'), ('address', 'Address')] %}
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ label }}</label>
+                            <input type="text" name="{{ field }}" class="form-control" value="{{ request.form.get(field, property|attr(field) or '') }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row">
+                        {% for field, label in [('bedrooms', 'Bedrooms'), ('bathrooms', 'Bathrooms'), ('parking', 'Parking')] %}
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label">{{ label }}</label>
+                            <input type="number" min="0" step="1" name="{{ field }}" class="form-control" value="{{ request.form.get(field, property|attr(field) if property|attr(field) is not none else 0) }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Floor Area</label>
+                            <input type="number" min="0" step="any" name="floor_area" class="form-control" value="{{ request.form.get('floor_area', property.floor_area if property.floor_area is not none else '') }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Land Size</label>
+                            <input type="number" min="0" step="any" name="land_size" class="form-control" value="{{ request.form.get('land_size', property.land_size if property.land_size is not none else '') }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <input type="text" name="status" class="form-control" value="{{ request.form.get('status', property.status or '') }}">
+                    </div>
+
+                    <div class="form-check mb-2">
+                        <input type="checkbox" name="featured" class="form-check-input" id="featured" {% if request.form.get('featured') == 'on' or (not request.form and property.featured) %}checked{% endif %}>
+                        <label class="form-check-label" for="featured">Featured</label>
+                    </div>
+
+                    <div class="form-check mb-4">
+                        <input type="checkbox" name="verified" class="form-check-input" id="verified" {% if request.form.get('verified') == 'on' or (not request.form and property.verified) %}checked{% endif %}>
+                        <label class="form-check-label" for="verified">Verified</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a href="{{ url_for('properties.details', id=property.id) }}" class="btn btn-secondary">Cancel</a>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

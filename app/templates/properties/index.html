@@ -87,9 +87,11 @@ Properties | IRURI™
                             View
                         </a>
 
-                        <button class="btn btn-sm btn-outline-warning">
+                        <a
+                            href="{{ url_for('properties.edit', id=property.id) }}"
+                            class="btn btn-sm btn-outline-warning">
                             Edit
-                        </button>
+                        </a>
 
                         <button class="btn btn-sm btn-outline-danger">
                             Delete

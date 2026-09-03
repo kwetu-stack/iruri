@@ -68,3 +68,72 @@ def create():
         return redirect(url_for("properties.index"))
 
     return render_template("properties/create.html")
+
+
+@properties.route("/<int:id>/edit", methods=["GET", "POST"])
+@login_required
+def edit(id):
+
+    property = Property.query.get_or_404(id)
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        property_type = request.form.get("property_type", "").strip()
+        listing_type = request.form.get("listing_type", "").strip()
+        price_value = request.form.get("price", "").strip()
+
+        if not title or not property_type or not listing_type or not price_value:
+            flash(
+                "Title, property type, listing type, and price are required.",
+                "danger",
+            )
+            return render_template("properties/edit.html", property=property)
+
+        try:
+            price = float(price_value)
+        except ValueError:
+            flash("Price must be numeric.", "danger")
+            return render_template("properties/edit.html", property=property)
+
+        property.title = title
+        property.description = request.form.get("description", "").strip()
+        property.property_type = property_type
+        property.listing_type = listing_type
+        property.price = price
+        property.currency = request.form.get("currency", "").strip() or None
+        property.county = request.form.get("county", "").strip() or None
+        property.town = request.form.get("town", "").strip() or None
+        property.estate = request.form.get("estate", "").strip() or None
+        property.address = request.form.get("address", "").strip() or None
+
+        try:
+            property.bedrooms = int(request.form.get("bedrooms", ""))
+            property.bathrooms = int(request.form.get("bathrooms", ""))
+            property.parking = int(request.form.get("parking", ""))
+            property.floor_area = (
+                float(request.form.get("floor_area", ""))
+                if request.form.get("floor_area", "").strip()
+                else None
+            )
+            property.land_size = (
+                float(request.form.get("land_size", ""))
+                if request.form.get("land_size", "").strip()
+                else None
+            )
+        except ValueError:
+            flash(
+                "Bedrooms, bathrooms, and parking must be whole numbers. Floor area and land size must be numeric.",
+                "danger",
+            )
+            return render_template("properties/edit.html", property=property)
+
+        property.status = request.form.get("status", "").strip() or None
+        property.featured = request.form.get("featured") == "on"
+        property.verified = request.form.get("verified") == "on"
+
+        db.session.commit()
+
+        flash("Property updated successfully.", "success")
+        return redirect(url_for("properties.details", id=property.id))
+
+    return render_template("properties/edit.html", property=property)
