@@ -228,6 +228,12 @@
     </div>
 </div>
 
+<div class="card shadow-sm border-0 mb-4"><div class="card-body">
+    <h5 class="card-title mb-3">Reservation</h5>
+    {% set active_reservation = property.reservations|selectattr('status', 'equalto', 'Active')|list|first %}
+    {% if active_reservation %}<dl class="row mb-0"><dt class="col-sm-3">Reservation Number</dt><dd class="col-sm-9"><a href="{{ url_for('reservations.details', id=active_reservation.id) }}">{{ active_reservation.reservation_number }}</a></dd><dt class="col-sm-3">Buyer</dt><dd class="col-sm-9">{{ active_reservation.buyer.full_name or active_reservation.buyer.company_name }}</dd><dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ active_reservation.status }}</dd><dt class="col-sm-3">Reservation Fee</dt><dd class="col-sm-9">{{ active_reservation.currency }} {{ "{:,.2f}".format(active_reservation.reservation_fee) }}</dd><dt class="col-sm-3">Reservation Date</dt><dd class="col-sm-9">{{ active_reservation.reservation_date.strftime('%d %b %Y %H:%M') }}</dd><dt class="col-sm-3">Expiry Date</dt><dd class="col-sm-9">{{ active_reservation.expiry_date.strftime('%d %b %Y') }}</dd></dl>{% else %}<p class="text-muted mb-0">No active reservation.</p>{% endif %}
+</div></div>
+
 <div class="row g-4">
 
     <div class="col-lg-7">

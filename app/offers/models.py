@@ -56,6 +56,9 @@ class PropertyOffer(db.Model):
         cascade="all, delete-orphan",
         order_by="OfferNegotiation.created_at.desc()",
     )
+    reservation = db.relationship(
+        "PropertyReservation", back_populates="property_offer", uselist=False
+    )
 
     def __repr__(self):
         return f"<PropertyOffer {self.offer_number}>"

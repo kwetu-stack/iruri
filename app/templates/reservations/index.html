@@ -1,0 +1,7 @@
+{% extends "layouts/dashboard.html" %}
+{% block title %}Reservations | IRURI{% endblock %}
+{% block dashboard_content %}
+<h3 class="mb-4">Reservations</h3>
+<div class="row g-3 mb-4">{% for label, value in [('Total', total), ('Active', active), ('Completed', completed), ('Expired', expired)] %}<div class="col-6 col-lg-3"><div class="card shadow-sm border-0"><div class="card-body"><span class="text-muted d-block">{{ label }}</span><strong class="fs-4">{{ value }}</strong></div></div></div>{% endfor %}</div>
+<div class="card shadow-sm border-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Reservation</th><th>Property</th><th>Buyer</th><th>Status</th><th>Expiry</th><th>Fee</th><th></th></tr></thead><tbody>{% for reservation in reservations %}<tr><td>{{ reservation.reservation_number }}</td><td><a href="{{ url_for('properties.details', id=reservation.property_id) }}">{{ reservation.property.title }}</a></td><td>{{ reservation.buyer.full_name or reservation.buyer.company_name }}</td><td>{{ reservation.status }}</td><td>{{ reservation.expiry_date.strftime('%d %b %Y') }}</td><td>{{ reservation.currency }} {{ "{:,.2f}".format(reservation.reservation_fee) }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('reservations.details', id=reservation.id) }}">View</a></td></tr>{% else %}<tr><td class="text-muted" colspan="7">No reservations yet.</td></tr>{% endfor %}</tbody></table></div></div>
+{% endblock %}
