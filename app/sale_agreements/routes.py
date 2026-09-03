@@ -8,7 +8,13 @@ from sqlalchemy.exc import IntegrityError
 from app.extensions import db
 from app.reservations.models import PropertyReservation
 from app.sale_agreements import sale_agreements
-from app.sale_agreements.models import AGREEMENT_STATUSES, SaleAgreement
+from app.sale_agreements.models import (
+    AGREEMENT_STATUSES,
+    PAYMENT_METHODS,
+    PAYMENT_TYPES,
+    PropertyPayment,
+    SaleAgreement,
+)
 
 
 def _is_admin():
@@ -60,6 +66,90 @@ def _parse_date(value):
         return datetime.strptime((value or "").strip(), "%Y-%m-%d").date()
     except (AttributeError, ValueError):
         return None
+
+
+def _parse_amount(value):
+    try:
+        amount = Decimal((value or "").strip())
+    except (AttributeError, InvalidOperation):
+        return None
+    if not amount.is_finite() or amount <= 0:
+        return None
+    return amount.quantize(Decimal("0.01"))
+
+
+def _payment_values(form, agreement):
+    payment_date = _parse_date(form.get("payment_date"))
+    payment_type = form.get("payment_type", "").strip()
+    payment_method = form.get("payment_method", "").strip()
+    amount = _parse_amount(form.get("amount"))
+    currency = form.get("currency", "").strip().upper()
+    if not payment_date:
+        return None, "Payment date is required."
+    if payment_type not in PAYMENT_TYPES:
+        return None, "Select a valid payment type."
+    if payment_method not in PAYMENT_METHODS:
+        return None, "Select a valid payment method."
+    if amount is None:
+        return None, "Amount must be greater than zero."
+    if currency != agreement.currency.upper():
+        return None, "Payment currency must match the agreement currency."
+    return {
+        "payment_date": payment_date,
+        "payment_type": payment_type,
+        "payment_method": payment_method,
+        "reference_number": form.get("reference_number", "").strip() or None,
+        "amount": amount,
+        "currency": currency,
+        "notes": form.get("notes", "").strip() or None,
+        "receipt_number": form.get("receipt_number", "").strip() or None,
+    }, None
+
+
+def _payment_error(agreement, values, payment=None):
+    existing = [item for item in agreement.payments if item is not payment]
+    received = sum(
+        (item.amount for item in existing if item.payment_type != "Refund"),
+        Decimal("0.00"),
+    )
+    refunds = sum(
+        (item.amount for item in existing if item.payment_type == "Refund"),
+        Decimal("0.00"),
+    )
+    if values["payment_type"] == "Refund":
+        if values["amount"] > received - refunds:
+            return "Refund cannot exceed the amount previously received."
+    elif received - refunds + values["amount"] > Decimal(agreement.agreed_price):
+        return "Total payments cannot exceed the agreed purchase price."
+    if (
+        values["receipt_number"]
+        and PropertyPayment.query.filter(
+            PropertyPayment.receipt_number == values["receipt_number"],
+            PropertyPayment.id != (payment.id if payment else None),
+        ).first()
+    ):
+        return "Receipt number must be unique."
+    return None
+
+
+def _recalculate_agreement(agreement):
+    if agreement.total_paid >= Decimal(agreement.agreed_price):
+        agreement.status = "Completed"
+        agreement.property.status = "Ready for Transfer"
+    elif agreement.status == "Completed":
+        agreement.status = "Active"
+        agreement.property.status = "Under Sale Agreement"
+
+
+def _render_payment_form(agreement, payment=None):
+    return render_template(
+        "sale_agreements/payment_form.html",
+        agreement=agreement,
+        payment=payment,
+        payment_types=PAYMENT_TYPES,
+        payment_methods=PAYMENT_METHODS,
+        today=date.today().isoformat(),
+    )
 
 
 def _form_values(form, default_currency="KES"):
@@ -159,6 +249,122 @@ def details(id):
         flash("You are not authorized to view this agreement.", "danger")
         return redirect(url_for("properties.details", id=agreement.property_id))
     return render_template("sale_agreements/details.html", agreement=agreement)
+
+
+@sale_agreements.route("/payments")
+@login_required
+def payments_index():
+    payments = PropertyPayment.query.order_by(
+        PropertyPayment.payment_date.desc(), PropertyPayment.id.desc()
+    ).all()
+    visible = [payment for payment in payments if _can_access(payment.sale_agreement)]
+    agreements = [
+        agreement for agreement in SaleAgreement.query.all() if _can_access(agreement)
+    ]
+    return render_template(
+        "sale_agreements/payments.html",
+        payments=visible,
+        total_transactions=len(visible),
+        total_received=sum(
+            (payment.amount for payment in visible if payment.payment_type != "Refund"),
+            Decimal("0.00"),
+        ),
+        outstanding_balance=sum(
+            (agreement.outstanding_balance for agreement in agreements), Decimal("0.00")
+        ),
+        completed_payments=sum(
+            payment.payment_type == "Final Payment" for payment in visible
+        ),
+        pending_balance=sum(
+            (
+                agreement.outstanding_balance
+                for agreement in agreements
+                if agreement.status == "Active"
+            ),
+            Decimal("0.00"),
+        ),
+    )
+
+
+@sale_agreements.route("/<int:id>/payments/create", methods=["GET", "POST"])
+@login_required
+def payment_create(id):
+    agreement = SaleAgreement.query.get_or_404(id)
+    if not _can_access(agreement):
+        flash("You are not authorized to record payments for this agreement.", "danger")
+        return redirect(url_for("sale_agreements.details", id=id))
+    if agreement.status != "Active":
+        flash("Payments can only be recorded for active agreements.", "danger")
+        return redirect(url_for("sale_agreements.details", id=id))
+    if request.method == "POST":
+        values, error = _payment_values(request.form, agreement)
+        if not error:
+            error = _payment_error(agreement, values)
+        if not error:
+            payment = PropertyPayment(
+                payment_number="TEMP",
+                sale_agreement=agreement,
+                received_by=current_user.email,
+                **values,
+            )
+            db.session.add(payment)
+            db.session.flush()
+            payment.payment_number = f"PAY-{datetime.utcnow().year}-{payment.id:06d}"
+            _recalculate_agreement(agreement)
+            db.session.commit()
+            flash("Payment recorded successfully.", "success")
+            return redirect(url_for("sale_agreements.payment_details", id=payment.id))
+        flash(error, "danger")
+    return _render_payment_form(agreement)
+
+
+@sale_agreements.route("/payments/<int:id>")
+@login_required
+def payment_details(id):
+    payment = PropertyPayment.query.get_or_404(id)
+    if not _can_access(payment.sale_agreement):
+        flash("You are not authorized to view this payment.", "danger")
+        return redirect(url_for("sale_agreements.index"))
+    return render_template("sale_agreements/payment_details.html", payment=payment)
+
+
+@sale_agreements.route("/payments/<int:id>/edit", methods=["GET", "POST"])
+@login_required
+def payment_edit(id):
+    payment = PropertyPayment.query.get_or_404(id)
+    agreement = payment.sale_agreement
+    if not _can_access(agreement):
+        flash("You are not authorized to edit this payment.", "danger")
+        return redirect(url_for("sale_agreements.payment_details", id=id))
+    if request.method == "POST":
+        values, error = _payment_values(request.form, agreement)
+        if not error:
+            error = _payment_error(agreement, values, payment)
+        if not error:
+            for field, value in values.items():
+                setattr(payment, field, value)
+            _recalculate_agreement(agreement)
+            db.session.commit()
+            flash("Payment updated successfully.", "success")
+            return redirect(url_for("sale_agreements.payment_details", id=id))
+        flash(error, "danger")
+    return _render_payment_form(agreement, payment)
+
+
+@sale_agreements.route("/payments/<int:id>/delete", methods=["POST"])
+@login_required
+def payment_delete(id):
+    payment = PropertyPayment.query.get_or_404(id)
+    agreement = payment.sale_agreement
+    if not _is_admin():
+        flash("Only administrators can delete payments.", "danger")
+    else:
+        db.session.delete(payment)
+        db.session.flush()
+        _recalculate_agreement(agreement)
+        db.session.commit()
+        flash("Payment deleted successfully.", "success")
+    return redirect(url_for("sale_agreements.details", id=agreement.id))
 
 
 @sale_agreements.route("/<int:id>/edit", methods=["GET", "POST"])
