@@ -13,6 +13,7 @@ from app.reservations import reservations
 from app.reservations.models import PropertyReservation
 from app.properties.models import Property
 from app.audit.service import record_audit
+from app.activities.service import record_activity
 from app.notifications.service import notify_profile
 
 
@@ -204,6 +205,14 @@ def create(offer_id):
                     f"Reservation {reservation.reservation_number} created",
                     "Reservation",
                     reservation.id,
+                )
+                record_activity(
+                    "Reservation Created",
+                    "Transactions",
+                    "Reservation Created",
+                    f"Reservation {reservation.reservation_number} created",
+                    reservation.id,
+                    "Reservation",
                 )
                 flash("Reservation created successfully.", "success")
                 return redirect(url_for("reservations.details", id=reservation.id))

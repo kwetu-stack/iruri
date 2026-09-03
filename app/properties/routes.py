@@ -22,6 +22,7 @@ from app.developers.models import Developer
 from app.agents.models import Agent
 from app.buyers.models import Buyer
 from app.audit.service import record_audit
+from app.activities.service import record_activity
 from app.notifications.service import notify_profile
 
 
@@ -405,6 +406,14 @@ def index():
 def details(id):
 
     property = Property.query.get_or_404(id)
+    record_activity(
+        "Property Viewed",
+        "Marketplace",
+        "Property Viewed",
+        f"Property {property.listing_number} viewed",
+        property.id,
+        "Property",
+    )
     buyer = _current_buyer()
     saved_property = (
         SavedProperty.query.filter_by(
@@ -992,6 +1001,14 @@ def create():
         property.listing_number = f"IRR-2026-{property.id:06d}"
 
         db.session.commit()
+        record_activity(
+            "Property Created",
+            "Marketplace",
+            "Property Created",
+            f"Property {property.listing_number} created",
+            property.id,
+            "Property",
+        )
 
         flash(
             "Property added successfully.",
@@ -1124,6 +1141,14 @@ def edit(id):
                 action_url=url_for("properties.details", id=property.id),
             )
         db.session.commit()
+        record_activity(
+            "Property Updated",
+            "Marketplace",
+            "Property Updated",
+            f"Property {property.listing_number} updated",
+            property.id,
+            "Property",
+        )
 
         flash("Property updated successfully.", "success")
         return redirect(url_for("properties.details", id=property.id))

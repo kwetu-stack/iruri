@@ -1,0 +1,19 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Activity Logs | IRURI™{% endblock %}
+
+{% block dashboard_content %}
+<h2 class="mb-4">Activity Logs</h2>
+<form class="row g-2 mb-4" method="get">
+    {% if users %}<div class="col-md-2"><select class="form-select" name="user_id"><option value="">All users</option>{% for user in users %}<option value="{{ user.id }}" {% if user.id == user_id %}selected{% endif %}>{{ user.first_name }} {{ user.last_name }}</option>{% endfor %}</select></div>{% endif %}
+    <div class="col-md-2"><select class="form-select" name="module"><option value="">All modules</option>{% for item in modules %}<option value="{{ item[0] }}" {% if item[0] == module %}selected{% endif %}>{{ item[0] }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><select class="form-select" name="activity_type"><option value="">All activities</option>{% for item in activity_types %}<option value="{{ item[0] }}" {% if item[0] == activity_type %}selected{% endif %}>{{ item[0] }}</option>{% endfor %}</select></div>
+    <div class="col-md-2"><input class="form-control" type="date" name="date_from" value="{{ date_from }}"></div>
+    <div class="col-md-2"><input class="form-control" type="date" name="date_to" value="{{ date_to }}"></div>
+    <div class="col-md-2"><input class="form-control" name="search" value="{{ search }}" placeholder="Activity number or description"></div>
+    <div class="col-12"><button class="btn btn-primary" type="submit">Filter</button></div>
+</form>
+<div class="table-responsive"><table class="table table-hover align-middle"><thead><tr><th>Time</th><th>User</th><th>Module</th><th>Activity</th></tr></thead><tbody>
+{% for log in logs %}<tr><td><a href="{{ url_for('activities.detail', log_id=log.id) }}">{{ log.created_at.strftime('%Y-%m-%d %H:%M') }}</a></td><td>{{ log.user.first_name ~ ' ' ~ log.user.last_name if log.user else 'System' }}</td><td>{{ log.module }}</td><td>{{ log.title }}</td></tr>{% else %}<tr><td colspan="4">No activities found.</td></tr>{% endfor %}
+</tbody></table></div>
+{% endblock %}

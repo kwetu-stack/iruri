@@ -10,6 +10,7 @@ from app.buyers import buyers
 from app.buyers.models import Buyer
 from app.extensions import db
 from app.audit.service import record_audit
+from app.activities.service import record_activity
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
@@ -166,6 +167,14 @@ def create():
         db.session.flush()
         buyer.buyer_number = f"BUY-{datetime.utcnow().year}-{buyer.id:06d}"
         db.session.commit()
+        record_activity(
+            "Buyer Registered",
+            "Buyers",
+            "Buyer Registered",
+            f"Buyer {buyer.buyer_number} registered",
+            buyer.id,
+            "Buyer",
+        )
         record_audit(
             "Create",
             "Marketplace",
@@ -207,6 +216,14 @@ def edit(id):
         for field, value in values.items():
             setattr(buyer, field, value)
         db.session.commit()
+        record_activity(
+            "Buyer Updated",
+            "Buyers",
+            "Buyer Updated",
+            f"Buyer {buyer.buyer_number} updated",
+            buyer.id,
+            "Buyer",
+        )
         record_audit(
             "Update",
             "Marketplace",

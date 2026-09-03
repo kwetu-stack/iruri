@@ -1,0 +1,8 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Activity Details | IRURI™{% endblock %}
+
+{% block dashboard_content %}
+<h2 class="mb-4">Activity Details</h2>
+<dl class="row"><dt class="col-sm-3">Activity Number</dt><dd class="col-sm-9">{{ log.activity_number }}</dd><dt class="col-sm-3">User</dt><dd class="col-sm-9">{{ log.user.first_name ~ ' ' ~ log.user.last_name if log.user else 'System' }}</dd><dt class="col-sm-3">Module</dt><dd class="col-sm-9">{{ log.module }}</dd><dt class="col-sm-3">Activity Type</dt><dd class="col-sm-9">{{ log.activity_type }}</dd><dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ log.description }}</dd><dt class="col-sm-3">Related Record</dt><dd class="col-sm-9">{{ log.related_record_type or 'Not specified' }}{% if log.related_record_id %} #{{ log.related_record_id }}{% endif %}</dd><dt class="col-sm-3">Date</dt><dd class="col-sm-9">{{ log.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</dd></dl>
+{% endblock %}

@@ -14,6 +14,7 @@ from app.sellers.models import Seller
 from app.transactions import transactions
 from app.transactions.models import PropertyTransaction
 from app.audit.service import record_audit
+from app.activities.service import record_activity
 from app.notifications.service import notify_profile
 
 
@@ -207,6 +208,14 @@ def complete(agreement_id):
                     f"Transaction {transaction.transaction_number} completed",
                     "Transaction",
                     transaction.id,
+                )
+                record_activity(
+                    "Transaction Completed",
+                    "Transactions",
+                    "Transaction Completed",
+                    f"Transaction {transaction.transaction_number} completed",
+                    transaction.id,
+                    "Transaction",
                 )
                 flash("Transaction completed successfully.", "success")
                 return redirect(url_for("transactions.details", id=transaction.id))

@@ -18,4 +18,12 @@ Dashboard | IRURI™
 
 </div>
 
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h3>Recent Activities</h3>
+    <a class="btn btn-outline-primary" href="{{ url_for('activities.index') }}">View all</a>
+</div>
+<div class="table-responsive"><table class="table table-hover"><thead><tr><th>Time</th><th>Module</th><th>Activity</th></tr></thead><tbody>
+{% for activity in recent_activities %}<tr><td>{{ activity.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ activity.module }}</td><td>{{ activity.title }}</td></tr>{% else %}<tr><td colspan="3">No recent activities.</td></tr>{% endfor %}
+</tbody></table></div>
+
 {% endblock %}

@@ -7,6 +7,7 @@ from flask_login import current_user, login_required
 from app.extensions import db
 from app.notifications import notifications
 from app.notifications.models import Notification
+from app.activities.service import record_activity
 
 
 def _is_admin():
@@ -65,6 +66,14 @@ def detail(id):
     if not notification.is_read:
         notification.mark_read()
         db.session.commit()
+        record_activity(
+            "Notification Read",
+            "Administration",
+            "Notification Read",
+            f"Notification {notification.notification_number} read",
+            notification.id,
+            "Notification",
+        )
     return render_template("notifications/detail.html", notification=notification)
 
 
@@ -74,8 +83,18 @@ def mark_read(id):
     notification = Notification.query.get_or_404(id)
     if not _owned(notification):
         abort(403)
+    was_unread = not notification.is_read
     notification.mark_read()
     db.session.commit()
+    if was_unread:
+        record_activity(
+            "Notification Read",
+            "Administration",
+            "Notification Read",
+            f"Notification {notification.notification_number} read",
+            notification.id,
+            "Notification",
+        )
     return redirect(url_for("notifications.detail", id=id))
 
 
@@ -85,9 +104,19 @@ def mark_all_read():
     query = Notification.query.filter_by(is_read=False)
     if not _is_admin():
         query = query.filter_by(recipient_id=current_user.id)
-    for notification in query.all():
+    read_notifications = query.all()
+    for notification in read_notifications:
         notification.mark_read()
     db.session.commit()
+    for notification in read_notifications:
+        record_activity(
+            "Notification Read",
+            "Administration",
+            "Notification Read",
+            f"Notification {notification.notification_number} read",
+            notification.id,
+            "Notification",
+        )
     return redirect(url_for("notifications.index"))
 
 

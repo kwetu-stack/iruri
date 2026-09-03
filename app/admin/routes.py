@@ -9,6 +9,7 @@ from app.admin.models import SystemSetting
 from app.admin.roles import PERMISSION_GROUPS, Permission, Role
 from app.extensions import db
 from app.audit.service import record_audit
+from app.activities.service import record_activity
 from app.notifications.service import administrator_users, notify_users
 from app.utils.permissions import require_permission
 import re
@@ -150,6 +151,14 @@ def role_permissions_edit(role_id):
         f"Permissions updated for role {role.name}",
         "Role",
         role.id,
+    )
+    record_activity(
+        "Role Assigned",
+        "Administration",
+        "Role Assigned",
+        f"Permissions assigned to role {role.name}",
+        role.id,
+        "Role",
     )
     flash("Permissions updated.", "success")
     return redirect(url_for("admin.role_detail", role_id=role.id))
@@ -448,6 +457,14 @@ def setting_edit(setting_id):
                 f"Setting {setting.setting_key} changed from {old_value} to {setting.setting_value}",
                 "System Setting",
                 setting.id,
+            )
+            record_activity(
+                "Settings Updated",
+                "Administration",
+                "Settings Updated",
+                f"Setting {setting.setting_key} updated",
+                setting.id,
+                "System Setting",
             )
             notify_users(
                 administrator_users(),

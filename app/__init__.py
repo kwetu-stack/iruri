@@ -22,6 +22,7 @@ from app.admin import admin, seed_default_email_templates, seed_default_settings
 from app.admin.roles import seed_default_roles_and_permissions
 from app.audit import audit
 from app.notifications import notifications
+from app.activities import activities
 from app.properties.models import Amenity
 
 import app.models
@@ -30,6 +31,7 @@ import app.admin.email_templates
 import app.admin.roles
 import app.audit.models
 import app.notifications.models
+import app.activities.models
 
 
 def create_app():
@@ -91,6 +93,7 @@ def create_app():
     app.register_blueprint(admin)
     app.register_blueprint(audit)
     app.register_blueprint(notifications)
+    app.register_blueprint(activities)
 
     with app.app_context():
         seed_default_amenities()

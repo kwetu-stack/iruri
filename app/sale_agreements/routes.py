@@ -17,6 +17,7 @@ from app.sale_agreements.models import (
 )
 from app.transactions.models import PropertyTransaction
 from app.audit.service import record_audit
+from app.activities.service import record_activity
 from app.notifications.service import notify_profile
 
 
@@ -263,6 +264,14 @@ def create(reservation_id):
                     "Sale Agreement",
                     agreement.id,
                 )
+                record_activity(
+                    "Agreement Created",
+                    "Transactions",
+                    "Agreement Created",
+                    f"Sale agreement {agreement.agreement_number} created",
+                    agreement.id,
+                    "Sale Agreement",
+                )
                 flash("Sale agreement created successfully.", "success")
                 return redirect(url_for("sale_agreements.details", id=agreement.id))
         flash(error, "danger")
@@ -363,6 +372,14 @@ def payment_create(id):
                 "Payment",
                 payment.id,
             )
+            record_activity(
+                "Payment Recorded",
+                "Transactions",
+                "Payment Recorded",
+                f"Payment {payment.payment_number} recorded",
+                payment.id,
+                "Payment",
+            )
             flash("Payment recorded successfully.", "success")
             return redirect(url_for("sale_agreements.payment_details", id=payment.id))
         flash(error, "danger")
@@ -462,6 +479,15 @@ def _change_status(id, target, allowed, message):
         elif target == "Completed":
             agreement.property.status = "Sold"
         db.session.commit()
+        if target == "Active":
+            record_activity(
+                "Agreement Signed",
+                "Transactions",
+                "Agreement Signed",
+                f"Sale agreement {agreement.agreement_number} signed",
+                agreement.id,
+                "Sale Agreement",
+            )
         flash(message, "success")
     return redirect(url_for("sale_agreements.details", id=id))
 
@@ -498,6 +524,14 @@ def complete(id):
             f"Sale agreement {agreement.agreement_number} completed",
             "Sale Agreement",
             agreement.id,
+        )
+        record_activity(
+            "Agreement Completed",
+            "Transactions",
+            "Agreement Completed",
+            f"Sale agreement {agreement.agreement_number} completed",
+            agreement.id,
+            "Sale Agreement",
         )
         flash("Sale agreement marked completed.", "success")
     return redirect(url_for("sale_agreements.details", id=id))

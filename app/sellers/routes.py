@@ -10,6 +10,7 @@ from app.extensions import db
 from app.sellers import sellers
 from app.sellers.models import Seller
 from app.audit.service import record_audit
+from app.activities.service import record_activity
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
@@ -138,6 +139,14 @@ def create():
         db.session.flush()
         seller.seller_number = f"SEL-{datetime.utcnow().year}-{seller.id:06d}"
         db.session.commit()
+        record_activity(
+            "Seller Registered",
+            "Sellers",
+            "Seller Registered",
+            f"Seller {seller.seller_number} registered",
+            seller.id,
+            "Seller",
+        )
         record_audit(
             "Create",
             "Marketplace",
