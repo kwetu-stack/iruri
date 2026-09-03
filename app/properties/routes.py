@@ -1,4 +1,8 @@
+import os
+import uuid
+
 from flask import (
+    current_app,
     render_template,
     request,
     redirect,
@@ -10,7 +14,36 @@ from flask_login import login_required
 
 from app.extensions import db
 from app.properties import properties
+from app.properties.image_models import PropertyImage
 from app.properties.models import Property
+
+ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
+MAX_IMAGE_SIZE = 10 * 1024 * 1024
+
+
+def _image_upload_folder():
+    folder = os.path.join(
+        current_app.root_path,
+        "static",
+        "uploads",
+        "properties",
+    )
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
+def _has_allowed_extension(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+    )
+
+
+def _file_size(uploaded_file):
+    uploaded_file.stream.seek(0, os.SEEK_END)
+    size = uploaded_file.stream.tell()
+    uploaded_file.stream.seek(0)
+    return size
 
 
 @properties.route("/")
@@ -35,6 +68,127 @@ def details(id):
         "properties/details.html",
         property=property,
     )
+
+
+@properties.route("/<int:id>/images")
+@login_required
+def images(id):
+    property = Property.query.get_or_404(id)
+    property_images = (
+        PropertyImage.query.filter_by(property_id=property.id)
+        .order_by(
+            PropertyImage.display_order.asc(),
+            PropertyImage.created_at.asc(),
+        )
+        .all()
+    )
+
+    return render_template(
+        "properties/images.html",
+        property=property,
+        images=property_images,
+    )
+
+
+@properties.route("/<int:id>/images/upload", methods=["GET", "POST"])
+@login_required
+def upload_images(id):
+    property = Property.query.get_or_404(id)
+
+    if request.method == "POST":
+        uploaded_files = request.files.getlist("images")
+        valid_files = []
+
+        for uploaded_file in uploaded_files:
+            if not uploaded_file or not uploaded_file.filename:
+                continue
+
+            if not _has_allowed_extension(uploaded_file.filename):
+                flash("Only JPG, JPEG, PNG, and WEBP images are allowed.", "danger")
+                return render_template(
+                    "properties/images.html", property=property, images=property.images
+                )
+
+            if _file_size(uploaded_file) > MAX_IMAGE_SIZE:
+                flash("Each image must be 10 MB or smaller.", "danger")
+                return render_template(
+                    "properties/images.html", property=property, images=property.images
+                )
+
+            valid_files.append(uploaded_file)
+
+        if not valid_files:
+            flash("Select at least one image to upload.", "danger")
+            return redirect(url_for("properties.upload_images", id=property.id))
+
+        upload_folder = _image_upload_folder()
+        next_order = (
+            db.session.query(db.func.max(PropertyImage.display_order))
+            .filter_by(property_id=property.id)
+            .scalar()
+        )
+        next_order = (next_order or 0) + 1
+        saved_paths = []
+
+        try:
+            for uploaded_file in valid_files:
+                original_filename = uploaded_file.filename
+                extension = original_filename.rsplit(".", 1)[1].lower()
+                filename = f"{uuid.uuid4().hex}.{extension}"
+                file_path = os.path.join(upload_folder, filename)
+                uploaded_file.save(file_path)
+                saved_paths.append(file_path)
+                db.session.add(
+                    PropertyImage(
+                        property_id=property.id,
+                        filename=filename,
+                        original_filename=original_filename,
+                        display_order=next_order,
+                    )
+                )
+                next_order += 1
+
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+            for file_path in saved_paths:
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+            raise
+
+        flash("Images uploaded successfully.", "success")
+        return redirect(url_for("properties.images", id=property.id))
+
+    property_images = (
+        PropertyImage.query.filter_by(property_id=property.id)
+        .order_by(
+            PropertyImage.display_order.asc(),
+            PropertyImage.created_at.asc(),
+        )
+        .all()
+    )
+    return render_template(
+        "properties/images.html",
+        property=property,
+        images=property_images,
+    )
+
+
+@properties.route("/image/<int:id>/delete", methods=["POST"])
+@login_required
+def delete_image(id):
+    image = PropertyImage.query.get_or_404(id)
+    property_id = image.property_id
+    file_path = os.path.join(_image_upload_folder(), image.filename)
+
+    db.session.delete(image)
+    db.session.commit()
+
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    flash("Image deleted successfully.", "success")
+    return redirect(url_for("properties.images", id=property_id))
 
 
 @properties.route("/create", methods=["GET", "POST"])

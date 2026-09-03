@@ -6,6 +6,37 @@
 
 {% block dashboard_content %}
 
+<div class="mb-4">
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Property Images</h5>
+        <a href="{{ url_for('properties.images', id=property.id) }}" class="btn btn-sm btn-outline-primary">
+            Manage Images
+        </a>
+    </div>
+
+    {% if property.images %}
+    <div class="row g-3">
+        {% for image in property.images|sort(attribute='display_order') %}
+        <div class="col-sm-6 col-lg-3">
+            <div class="card h-100 shadow-sm">
+                <img src="{{ url_for('static', filename='uploads/properties/' ~ image.filename) }}" class="card-img-top" alt="{{ image.original_filename }}" style="height: 180px; object-fit: cover;">
+                <div class="card-body p-2">
+                    <p class="small text-truncate mb-0" title="{{ image.original_filename }}">{{ image.original_filename }}</p>
+                    {% if image.is_cover %}<span class="badge bg-primary mt-2">Cover</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card border-secondary-subtle">
+        <div class="card-body text-center text-muted">No property images uploaded.</div>
+    </div>
+    {% endif %}
+
+</div>
+
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
 
     <div>

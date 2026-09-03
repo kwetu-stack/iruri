@@ -10,109 +10,54 @@ class Property(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
-    listing_number = db.Column(
-        db.String(30),
-        unique=True,
-        nullable=False
-    )
+    listing_number = db.Column(db.String(30), unique=True, nullable=False)
 
-    title = db.Column(
-        db.String(200),
-        nullable=False
-    )
+    title = db.Column(db.String(200), nullable=False)
 
-    description = db.Column(
-        db.Text
-    )
+    description = db.Column(db.Text)
 
-    property_type = db.Column(
-        db.String(50),
-        nullable=False
-    )
+    property_type = db.Column(db.String(50), nullable=False)
 
-    listing_type = db.Column(
-        db.String(30),
-        nullable=False
-    )
+    listing_type = db.Column(db.String(30), nullable=False)
 
-    price = db.Column(
-        db.Float,
-        nullable=False
-    )
+    price = db.Column(db.Float, nullable=False)
 
-    currency = db.Column(
-        db.String(10),
-        default="KES"
-    )
+    currency = db.Column(db.String(10), default="KES")
 
-    county = db.Column(
-        db.String(100)
-    )
+    county = db.Column(db.String(100))
 
-    town = db.Column(
-        db.String(100)
-    )
+    town = db.Column(db.String(100))
 
-    estate = db.Column(
-        db.String(150)
-    )
+    estate = db.Column(db.String(150))
 
-    address = db.Column(
-        db.String(255)
-    )
+    address = db.Column(db.String(255))
 
-    bedrooms = db.Column(
-        db.Integer,
-        default=0
-    )
+    bedrooms = db.Column(db.Integer, default=0)
 
-    bathrooms = db.Column(
-        db.Integer,
-        default=0
-    )
+    bathrooms = db.Column(db.Integer, default=0)
 
-    parking = db.Column(
-        db.Integer,
-        default=0
-    )
+    parking = db.Column(db.Integer, default=0)
 
-    floor_area = db.Column(
-        db.Float
-    )
+    floor_area = db.Column(db.Float)
 
-    land_size = db.Column(
-        db.Float
-    )
+    land_size = db.Column(db.Float)
 
-    status = db.Column(
-        db.String(30),
-        default="Available"
-    )
+    status = db.Column(db.String(30), default="Available")
 
-    featured = db.Column(
-        db.Boolean,
-        default=False
-    )
+    featured = db.Column(db.Boolean, default=False)
 
-    verified = db.Column(
-        db.Boolean,
-        default=False
-    )
+    verified = db.Column(db.Boolean, default=False)
 
-    views = db.Column(
-        db.Integer,
-        default=0
-    )
+    views = db.Column(db.Integer, default=0)
 
-    created_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow
-    )
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     updated_at = db.Column(
-        db.DateTime,
-        default=datetime.utcnow,
-        onupdate=datetime.utcnow
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    images = db.relationship(
+        "PropertyImage", backref="property", lazy=True, cascade="all, delete-orphan"
     )
 
     def __repr__(self):
