@@ -6,6 +6,7 @@ from config import Config
 from app.extensions import db, migrate, login_manager
 from app.auth import auth
 from app.properties import properties
+from app.agents import agents
 
 import app.models
 
@@ -33,5 +34,6 @@ def create_app():
     app.register_blueprint(auth)
     app.register_blueprint(dashboard)
     app.register_blueprint(properties)
+    app.register_blueprint(agents)
 
     return app

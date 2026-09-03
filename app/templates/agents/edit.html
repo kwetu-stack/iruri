@@ -1,0 +1,31 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Edit Agent | IRURI{% endblock %}
+
+{% block dashboard_content %}
+<div class="row justify-content-center">
+    <div class="col-lg-9">
+        <div class="card shadow-sm">
+            <div class="card-header"><h3 class="mb-0">Edit Agent</h3></div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="row">
+                        {% for field, label in [('first_name', 'First Name'), ('last_name', 'Last Name'), ('phone', 'Phone'), ('email', 'Email'), ('gender', 'Gender'), ('national_id', 'National ID'), ('license_number', 'License Number'), ('kra_pin', 'KRA PIN'), ('county', 'County'), ('town', 'Town'), ('address', 'Address'), ('years_experience', 'Years of Experience'), ('commission_rate', 'Commission Rate (%)')] %}
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label" for="{{ field }}">{{ label }}</label>
+                            <input type="{{ 'email' if field == 'email' else 'number' if field in ['years_experience', 'commission_rate'] else 'text' }}" name="{{ field }}" id="{{ field }}" class="form-control" value="{{ request.form.get(field, agent|attr(field) if agent|attr(field) is not none else '') }}" {% if field in ['first_name', 'last_name', 'phone'] %}required{% endif %} {% if field == 'years_experience' %}min="0" step="1"{% elif field == 'commission_rate' %}min="0" step="0.01"{% endif %}>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="mb-3"><label class="form-label" for="bio">Bio</label><textarea name="bio" id="bio" class="form-control" rows="4">{{ request.form.get('bio', agent.bio or '') }}</textarea></div>
+                    {% if agent.profile_photo %}<p class="small text-muted mb-2">Current profile photo</p><img src="{{ url_for('static', filename='uploads/agents/' ~ agent.profile_photo) }}" alt="{{ agent.full_name }}" class="rounded mb-3" width="100" height="100" style="object-fit: cover;">{% endif %}
+                    <div class="mb-3"><label class="form-label" for="profile_photo">Replace Profile Photo</label><input type="file" name="profile_photo" id="profile_photo" class="form-control" accept=".jpg,.jpeg,.png,.webp"></div>
+                    <div class="form-check mb-4"><input type="checkbox" name="is_active" id="is_active" class="form-check-input" {% if request.form.get('is_active') == 'on' or (not request.form and agent.is_active) %}checked{% endif %}><label class="form-check-label" for="is_active">Active</label></div>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                    <a href="{{ url_for('agents.details', id=agent.id) }}" class="btn btn-secondary">Cancel</a>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

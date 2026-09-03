@@ -1,0 +1,20 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}{{ agent.full_name }} | IRURI{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div class="d-flex align-items-center gap-3">
+        {% if agent.profile_photo %}<img src="{{ url_for('static', filename='uploads/agents/' ~ agent.profile_photo) }}" alt="{{ agent.full_name }}" class="rounded-circle" width="88" height="88" style="object-fit: cover;">{% else %}<div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 88px; height: 88px; font-size: 1.4rem;">{{ agent.first_name[0] }}{{ agent.last_name[0] }}</div>{% endif %}
+        <div><h2 class="mb-1">{{ agent.full_name }}</h2><p class="text-muted mb-0">{{ agent.agent_number }}</p></div>
+    </div>
+    <span class="badge {{ 'bg-success' if agent.is_active else 'bg-secondary' }} fs-6">{{ "Active" if agent.is_active else "Inactive" }}</span>
+</div>
+<div class="row g-4">
+    <div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5 class="card-title mb-3">Contact Information</h5><dl class="row mb-0"><dt class="col-sm-5">Phone</dt><dd class="col-sm-7">{{ agent.phone }}</dd><dt class="col-sm-5">Email</dt><dd class="col-sm-7">{{ agent.email or "Not provided" }}</dd><dt class="col-sm-5">Gender</dt><dd class="col-sm-7">{{ agent.gender or "Not specified" }}</dd><dt class="col-sm-5">National ID</dt><dd class="col-sm-7">{{ agent.national_id or "Not provided" }}</dd></dl></div></div></div>
+    <div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5 class="card-title mb-3">Professional Information</h5><dl class="row mb-0"><dt class="col-sm-6">License Number</dt><dd class="col-sm-6">{{ agent.license_number or "Not provided" }}</dd><dt class="col-sm-6">KRA PIN</dt><dd class="col-sm-6">{{ agent.kra_pin or "Not provided" }}</dd><dt class="col-sm-6">Experience</dt><dd class="col-sm-6">{{ agent.years_experience if agent.years_experience is not none else "Not specified" }}</dd><dt class="col-sm-6">Commission Rate</dt><dd class="col-sm-6">{{ agent.commission_rate ~ '%' if agent.commission_rate is not none else "Not specified" }}</dd></dl></div></div></div>
+    <div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5 class="card-title mb-3">Location</h5><dl class="row mb-0"><dt class="col-sm-4">County</dt><dd class="col-sm-8">{{ agent.county or "Not specified" }}</dd><dt class="col-sm-4">Town</dt><dd class="col-sm-8">{{ agent.town or "Not specified" }}</dd><dt class="col-sm-4">Address</dt><dd class="col-sm-8">{{ agent.address or "Not specified" }}</dd></dl></div></div></div>
+    <div class="col-lg-6"><div class="card shadow-sm border-0 h-100"><div class="card-body"><h5 class="card-title mb-3">About Agent</h5><p class="mb-3">{{ agent.bio or "No bio provided." }}</p><small class="text-muted d-block">Created {{ agent.created_at.strftime('%d %b %Y, %H:%M') if agent.created_at else "Not available" }}</small><small class="text-muted d-block">Updated {{ agent.updated_at.strftime('%d %b %Y, %H:%M') if agent.updated_at else "Not available" }}</small></div></div></div>
+</div>
+<div class="d-flex flex-wrap gap-2 mt-4"><a href="{{ url_for('agents.index') }}" class="btn btn-secondary">Back to Agents</a><a href="{{ url_for('agents.edit', id=agent.id) }}" class="btn btn-warning">Edit Agent</a><a href="{{ url_for('agents.delete', id=agent.id) }}" class="btn btn-danger">Delete Agent</a></div>
+{% endblock %}

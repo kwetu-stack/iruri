@@ -1,0 +1,7 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Delete Agent | IRURI{% endblock %}
+
+{% block dashboard_content %}
+<div class="row justify-content-center"><div class="col-lg-6"><div class="card shadow-sm border-danger"><div class="card-header text-danger"><h3 class="mb-0">Delete Agent</h3></div><div class="card-body"><p>Are you sure you want to delete <strong>{{ agent.full_name }}</strong> ({{ agent.agent_number }})?</p><p class="text-muted">This action cannot be undone.</p><form method="POST"><button type="submit" class="btn btn-danger">Delete Agent</button><a href="{{ url_for('agents.details', id=agent.id) }}" class="btn btn-secondary">Cancel</a></form></div></div></div></div>
+{% endblock %}
