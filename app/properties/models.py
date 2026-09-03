@@ -147,6 +147,13 @@ class Property(db.Model):
         "PropertyImage", backref="property", lazy=True, cascade="all, delete-orphan"
     )
 
+    floor_plans = db.relationship(
+        "PropertyFloorPlan",
+        back_populates="property",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+
     documents = db.relationship(
         "PropertyDocument",
         back_populates="property",
@@ -174,6 +181,30 @@ class Property(db.Model):
 
     def __repr__(self):
         return f"<Property {self.listing_number}>"
+
+
+class PropertyFloorPlan(db.Model):
+    """A floor plan uploaded for a property listing."""
+
+    __tablename__ = "property_floor_plans"
+
+    id = db.Column(db.Integer, primary_key=True)
+    property_id = db.Column(
+        db.Integer,
+        db.ForeignKey("properties.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    floor_name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=True)
+    file_name = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    file_extension = db.Column(db.String(20), nullable=False)
+    file_size = db.Column(db.Integer, nullable=False)
+    display_order = db.Column(db.Integer, nullable=False, default=0)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    property = db.relationship("Property", back_populates="floor_plans")
 
 
 class PropertyDocument(db.Model):

@@ -87,6 +87,49 @@
 
 </div>
 
+<div class="mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h5 class="mb-0">Floor Plans</h5>
+        <a href="{{ url_for('properties.upload_floor_plan', id=property.id) }}" class="btn btn-sm btn-outline-primary">
+            Upload Floor Plan
+        </a>
+    </div>
+
+    {% if property.floor_plans %}
+    <div class="row g-3">
+        {% for floor_plan in property.floor_plans|sort(attribute='display_order') %}
+        <div class="col-md-6 col-xl-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body">
+                    {% if floor_plan.file_extension in ['jpg', 'jpeg', 'png'] %}
+                    <img src="{{ url_for('static', filename=floor_plan.file_path) }}" class="img-fluid rounded mb-3" alt="{{ floor_plan.floor_name }}" style="height: 190px; width: 100%; object-fit: cover;">
+                    {% else %}
+                    <div class="d-flex align-items-center justify-content-center bg-light rounded mb-3" style="height: 190px;">
+                        <i class="bi bi-file-earmark-pdf fs-1 text-danger"></i>
+                    </div>
+                    {% endif %}
+                    <h6 class="mb-1">{{ floor_plan.floor_name }}</h6>
+                    {% if floor_plan.description %}
+                    <p class="small text-muted mb-3">{{ floor_plan.description }}</p>
+                    {% endif %}
+                    <div class="d-flex gap-2">
+                        <a href="{{ url_for('properties.download_floor_plan', id=floor_plan.id) }}" class="btn btn-sm btn-outline-primary flex-fill">Download</a>
+                        <form method="POST" action="{{ url_for('properties.delete_floor_plan', id=floor_plan.id) }}" class="d-inline" onsubmit="return confirm('Delete this floor plan?');">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card border-secondary-subtle">
+        <div class="card-body text-center text-muted">No floor plans uploaded for this property.</div>
+    </div>
+    {% endif %}
+</div>
+
 <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
 
     <div>

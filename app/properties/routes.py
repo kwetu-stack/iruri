@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 
 from flask import (
@@ -21,12 +22,20 @@ from app.agents.models import Agent
 from app.extensions import db
 from app.properties import properties
 from app.properties.image_models import PropertyImage
-from app.properties.models import Amenity, Property, PropertyDocument, PropertyFeature
+from app.properties.models import (
+    Amenity,
+    Property,
+    PropertyDocument,
+    PropertyFeature,
+    PropertyFloorPlan,
+)
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
 ALLOWED_DOCUMENT_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
 MAX_DOCUMENT_SIZE = 20 * 1024 * 1024
+ALLOWED_FLOOR_PLAN_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
+MAX_FLOOR_PLAN_SIZE = 20 * 1024 * 1024
 DOCUMENT_TYPES = (
     "Title Deed",
     "Lease Agreement",
@@ -84,6 +93,12 @@ def _document_upload_folder():
     return folder
 
 
+def _floor_plan_upload_folder():
+    folder = os.path.join(current_app.root_path, "static", "uploads", "floor_plans")
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
 def _has_allowed_extension(filename):
     return (
         "." in filename
@@ -96,6 +111,17 @@ def _has_allowed_document_extension(filename):
         "." in filename
         and filename.rsplit(".", 1)[1].lower() in ALLOWED_DOCUMENT_EXTENSIONS
     )
+
+
+def _has_allowed_floor_plan_extension(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_FLOOR_PLAN_EXTENSIONS
+    )
+
+
+def _sanitize_floor_name(value):
+    return re.sub(r"[^A-Za-z0-9]+", "", value.strip()) or "FloorPlan"
 
 
 def _file_size(uploaded_file):
@@ -412,6 +438,127 @@ def delete_document(id):
     if os.path.exists(file_path):
         os.remove(file_path)
     flash("Document deleted successfully.", "success")
+    return redirect(url_for("properties.details", id=property_id))
+
+
+@properties.route("/<int:id>/floor-plans")
+@login_required
+def floor_plans(id):
+    property = Property.query.get_or_404(id)
+    floor_plans_list = (
+        PropertyFloorPlan.query.filter_by(property_id=property.id)
+        .order_by(
+            PropertyFloorPlan.display_order.asc(), PropertyFloorPlan.uploaded_at.asc()
+        )
+        .all()
+    )
+    return render_template(
+        "property_floor_plans/index.html",
+        property=property,
+        floor_plans=floor_plans_list,
+    )
+
+
+@properties.route("/<int:id>/floor-plans/upload", methods=["GET", "POST"])
+@login_required
+def upload_floor_plan(id):
+    property = Property.query.get_or_404(id)
+
+    if request.method == "POST":
+        floor_name = request.form.get("floor_name", "").strip()
+        description = request.form.get("description", "").strip()
+        uploaded_file = request.files.get("file")
+
+        if not property:
+            flash("A valid property is required.", "danger")
+        elif not floor_name:
+            flash("Floor name is required.", "danger")
+        elif not uploaded_file or not uploaded_file.filename:
+            flash("Select a floor plan file to upload.", "danger")
+        elif not _has_allowed_floor_plan_extension(uploaded_file.filename):
+            flash("Only JPG, JPEG, PNG, and PDF floor plans are allowed.", "danger")
+        elif _file_size(uploaded_file) > MAX_FLOOR_PLAN_SIZE:
+            flash("Floor plans must be 20 MB or smaller.", "danger")
+        else:
+            original_filename = secure_filename(uploaded_file.filename)
+            extension = original_filename.rsplit(".", 1)[1].lower()
+            timestamp = (
+                __import__("datetime").datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            )
+            safe_property_number = property.listing_number.replace(" ", "")
+            safe_floor_name = _sanitize_floor_name(floor_name)
+            stored_filename = (
+                f"{safe_property_number}_{safe_floor_name}_{timestamp}.{extension}"
+            )
+            file_path = os.path.join(_floor_plan_upload_folder(), stored_filename)
+
+            uploaded_file.save(file_path)
+
+            next_order = (
+                db.session.query(db.func.max(PropertyFloorPlan.display_order))
+                .filter_by(property_id=property.id)
+                .scalar()
+                or 0
+            ) + 1
+
+            floor_plan = PropertyFloorPlan(
+                property_id=property.id,
+                floor_name=floor_name,
+                description=description or None,
+                file_name=stored_filename,
+                file_path=os.path.join("uploads", "floor_plans", stored_filename),
+                file_extension=extension,
+                file_size=os.path.getsize(file_path),
+                display_order=next_order,
+            )
+
+            try:
+                db.session.add(floor_plan)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                raise
+
+            flash("Floor plan uploaded successfully.", "success")
+            return redirect(url_for("properties.details", id=property.id))
+
+    return render_template(
+        "property_floor_plans/upload.html",
+        property=property,
+    )
+
+
+@properties.route("/floor-plans/<int:id>/download")
+@login_required
+def download_floor_plan(id):
+    floor_plan = PropertyFloorPlan.query.get_or_404(id)
+    download_name = (
+        f"{_sanitize_floor_name(floor_plan.floor_name)}.{floor_plan.file_extension}"
+    )
+    return send_from_directory(
+        _floor_plan_upload_folder(),
+        floor_plan.file_name,
+        as_attachment=True,
+        download_name=download_name,
+    )
+
+
+@properties.route("/floor-plans/<int:id>/delete", methods=["POST"])
+@login_required
+def delete_floor_plan(id):
+    floor_plan = PropertyFloorPlan.query.get_or_404(id)
+    property_id = floor_plan.property_id
+    file_path = os.path.join(_floor_plan_upload_folder(), floor_plan.file_name)
+
+    db.session.delete(floor_plan)
+    db.session.commit()
+
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    flash("Floor plan deleted successfully.", "success")
     return redirect(url_for("properties.details", id=property_id))
 
 

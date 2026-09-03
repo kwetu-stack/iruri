@@ -6,7 +6,13 @@ from app.extensions import db
 properties = Blueprint("properties", __name__, url_prefix="/properties")
 
 # Import models first so SQLAlchemy registers them
-from app.properties.models import Amenity, Property, PropertyDocument, PropertyFeature
+from app.properties.models import (
+    Amenity,
+    Property,
+    PropertyDocument,
+    PropertyFeature,
+    PropertyFloorPlan,
+)
 from app.properties.image_models import PropertyImage
 
 DEFAULT_AMENITIES = (

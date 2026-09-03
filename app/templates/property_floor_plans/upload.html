@@ -1,0 +1,34 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Upload Floor Plan | IRURI™{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h2 class="mb-1">Upload Floor Plan</h2>
+        <p class="text-muted mb-0">Add a floor plan for {{ property.title }}</p>
+    </div>
+    <a href="{{ url_for('properties.details', id=property.id) }}" class="btn btn-secondary">Back to Property</a>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="floor_name" class="form-label">Floor Name</label>
+                <input id="floor_name" name="floor_name" type="text" class="form-control" placeholder="Ground Floor" required>
+            </div>
+            <div class="mb-3">
+                <label for="description" class="form-label">Description</label>
+                <textarea id="description" name="description" class="form-control" rows="3" placeholder="Main living area and kitchen layout."></textarea>
+            </div>
+            <div class="mb-3">
+                <label for="file" class="form-label">Upload File</label>
+                <input id="file" name="file" type="file" class="form-control" accept=".jpg,.jpeg,.png,.pdf" required>
+                <div class="form-text">JPG, JPEG, PNG, or PDF. Maximum 20 MB.</div>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Floor Plan</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
