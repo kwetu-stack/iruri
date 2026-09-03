@@ -52,5 +52,12 @@ class Buyer(db.Model):
         order_by="ViewingRequest.requested_date.asc()",
     )
 
+    offers = db.relationship(
+        "PropertyOffer",
+        back_populates="buyer",
+        cascade="all, delete-orphan",
+        order_by="PropertyOffer.submitted_at.desc()",
+    )
+
     def __repr__(self):
         return f"<Buyer {self.buyer_number}>"

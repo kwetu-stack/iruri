@@ -31,6 +31,8 @@ class Agent(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
+    offers = db.relationship("PropertyOffer", back_populates="agent")
+
     def __repr__(self):
         return f"<Agent {self.agent_number}>"
 

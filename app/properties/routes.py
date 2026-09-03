@@ -392,12 +392,17 @@ def details(id):
         if buyer
         else None
     )
+    offer_counts = {
+        status: sum(offer.status == status for offer in property.offers)
+        for status in ("Pending", "Accepted", "Rejected")
+    }
 
     return render_template(
         "properties/details.html",
         property=property,
         saved_property=saved_property,
         current_buyer=buyer,
+        offer_counts=offer_counts,
     )
 
 

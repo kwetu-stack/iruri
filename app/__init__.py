@@ -13,6 +13,7 @@ from app.developers import developers
 from app.sellers import sellers
 from app.buyers import buyers
 from app.viewings import viewings
+from app.offers import offers
 from app.properties.models import Amenity
 
 import app.models
@@ -69,6 +70,7 @@ def create_app():
     app.register_blueprint(sellers)
     app.register_blueprint(buyers)
     app.register_blueprint(viewings)
+    app.register_blueprint(offers)
 
     with app.app_context():
         seed_default_amenities()
