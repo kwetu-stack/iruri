@@ -1,6 +1,7 @@
 import os
 import re
 import uuid
+import math
 from datetime import datetime
 from urllib.parse import urlparse
 
@@ -171,6 +172,38 @@ def _selected_features():
         if feature_ids
         else []
     )
+
+
+def _location_values():
+    values = {
+        "county": request.form.get("county", "").strip() or None,
+        "town": request.form.get("town", "").strip() or None,
+        "estate": request.form.get("estate", "").strip() or None,
+        "neighbourhood": request.form.get("neighbourhood", "").strip() or None,
+        "landmark": request.form.get("landmark", "").strip() or None,
+        "postal_code": request.form.get("postal_code", "").strip() or None,
+        "google_map_url": request.form.get("google_map_url", "").strip() or None,
+    }
+
+    for field, minimum, maximum in (
+        ("latitude", -90, 90),
+        ("longitude", -180, 180),
+    ):
+        raw_value = request.form.get(field, "").strip()
+        if not raw_value:
+            values[field] = None
+            continue
+        try:
+            value = float(raw_value)
+        except ValueError:
+            raise ValueError(f"{field.capitalize()} must be numeric.")
+        if not math.isfinite(value) or not minimum <= value <= maximum:
+            raise ValueError(
+                f"{field.capitalize()} must be between {minimum} and {maximum}."
+            )
+        values[field] = value
+
+    return values
 
 
 def _amenity_form(template, amenity=None):
@@ -836,6 +869,12 @@ def create():
             flash("The selected agent is invalid.", "danger")
             return _render_property_form("properties/create.html")
 
+        try:
+            location_values = _location_values()
+        except ValueError as error:
+            flash(str(error), "danger")
+            return _render_property_form("properties/create.html")
+
         property = Property(
             listing_number="TEMP",
             seller_id=seller.id,
@@ -846,7 +885,7 @@ def create():
             property_type=request.form["property_type"],
             listing_type=request.form["listing_type"],
             price=float(request.form["price"]),
-            county=request.form["county"],
+            **location_values,
             amenities=_selected_amenities(),
             features=_selected_features(),
         )
@@ -946,6 +985,15 @@ def edit(id):
                 "danger",
             )
             return _render_property_form("properties/edit.html", property)
+
+        try:
+            location_values = _location_values()
+        except ValueError as error:
+            flash(str(error), "danger")
+            return _render_property_form("properties/edit.html", property)
+
+        for field, value in location_values.items():
+            setattr(property, field, value)
 
         property.status = request.form.get("status", "").strip() or None
         property.featured = request.form.get("featured") == "on"

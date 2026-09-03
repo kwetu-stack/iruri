@@ -146,6 +146,31 @@
 
                     </div>
 
+                    <div class="row">
+                        {% for field, label in [('town', 'Town'), ('estate', 'Estate'), ('neighbourhood', 'Neighbourhood'), ('landmark', 'Landmark'), ('postal_code', 'Postal Code')] %}
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">{{ label }}</label>
+                            <input type="text" name="{{ field }}" class="form-control" value="{{ request.form.get(field, '') }}">
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Latitude</label>
+                            <input type="number" name="latitude" class="form-control" min="-90" max="90" step="any" value="{{ request.form.get('latitude', '') }}">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Longitude</label>
+                            <input type="number" name="longitude" class="form-control" min="-180" max="180" step="any" value="{{ request.form.get('longitude', '') }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Google Maps URL (optional)</label>
+                        <input type="url" name="google_map_url" class="form-control" value="{{ request.form.get('google_map_url', '') }}">
+                    </div>
+
                     <div class="mb-4">
 
                         <label class="form-label">

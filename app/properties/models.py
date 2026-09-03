@@ -111,11 +111,23 @@ class Property(db.Model):
 
     currency = db.Column(db.String(10), default="KES")
 
-    county = db.Column(db.String(100))
+    county = db.Column(db.String(100), index=True)
 
-    town = db.Column(db.String(100))
+    town = db.Column(db.String(100), index=True)
 
-    estate = db.Column(db.String(150))
+    estate = db.Column(db.String(150), index=True)
+
+    neighbourhood = db.Column(db.String(150), index=True)
+
+    landmark = db.Column(db.String(255))
+
+    postal_code = db.Column(db.String(20))
+
+    latitude = db.Column(db.Float)
+
+    longitude = db.Column(db.Float)
+
+    google_map_url = db.Column(db.String(500))
 
     address = db.Column(db.String(255))
 

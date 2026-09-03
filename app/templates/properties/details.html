@@ -291,8 +291,32 @@
                     <dt class="col-sm-4">Estate</dt>
                     <dd class="col-sm-8">{{ property.estate or "Not specified" }}</dd>
 
+                    <dt class="col-sm-4">Neighbourhood</dt>
+                    <dd class="col-sm-8">{{ property.neighbourhood or "Not specified" }}</dd>
+
+                    <dt class="col-sm-4">Landmark</dt>
+                    <dd class="col-sm-8">{{ property.landmark or "Not specified" }}</dd>
+
+                    <dt class="col-sm-4">Postal Code</dt>
+                    <dd class="col-sm-8">{{ property.postal_code or "Not specified" }}</dd>
+
                     <dt class="col-sm-4">Address</dt>
                     <dd class="col-sm-8">{{ property.address or "Not specified" }}</dd>
+
+                    <dt class="col-sm-4">Latitude</dt>
+                    <dd class="col-sm-8">{{ property.latitude if property.latitude is not none else "Not specified" }}</dd>
+
+                    <dt class="col-sm-4">Longitude</dt>
+                    <dd class="col-sm-8">{{ property.longitude if property.longitude is not none else "Not specified" }}</dd>
+
+                    <dt class="col-sm-4">Google Maps</dt>
+                    <dd class="col-sm-8">
+                        {% if property.google_map_url %}
+                        <a href="{{ property.google_map_url }}" target="_blank" rel="noopener noreferrer">Open in Google Maps</a>
+                        {% else %}
+                        Not specified
+                        {% endif %}
+                    </dd>
                 </dl>
 
             </div>
