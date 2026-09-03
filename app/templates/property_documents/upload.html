@@ -1,0 +1,52 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Upload Property Document | IRURI™{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h2 class="mb-1">Upload Property Document</h2>
+        <p class="text-muted mb-0">Add a supporting document to a property.</p>
+    </div>
+    {% if property %}
+    <a href="{{ url_for('properties.details', id=property.id) }}" class="btn btn-secondary">Back to Property</a>
+    {% else %}
+    <a href="{{ url_for('properties.documents') }}" class="btn btn-secondary">View Documents</a>
+    {% endif %}
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label for="property_id" class="form-label">Property</label>
+                <select id="property_id" name="property_id" class="form-select" required>
+                    <option value="">Select a property</option>
+                    {% for item in properties %}
+                    <option value="{{ item.id }}" {{ 'selected' if property and item.id == property.id else '' }}>{{ item.title }} ({{ item.listing_number }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="document_type" class="form-label">Document Type</label>
+                <select id="document_type" name="document_type" class="form-select" required>
+                    <option value="">Select a document type</option>
+                    {% for document_type in document_types %}
+                    <option value="{{ document_type }}">{{ document_type }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="mb-3">
+                <label for="file" class="form-label">Upload File</label>
+                <input id="file" name="file" type="file" class="form-control" accept=".pdf,.jpg,.jpeg,.png" required>
+                <div class="form-text">PDF, JPG, JPEG, or PNG. Maximum 20 MB.</div>
+            </div>
+            <div class="mb-3">
+                <label for="notes" class="form-label">Notes <span class="text-muted">(optional)</span></label>
+                <textarea id="notes" name="notes" class="form-control" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Save Document</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

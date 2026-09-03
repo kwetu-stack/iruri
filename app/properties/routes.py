@@ -8,9 +8,11 @@ from flask import (
     redirect,
     url_for,
     flash,
+    send_from_directory,
 )
 
-from flask_login import login_required
+from flask_login import current_user, login_required
+from werkzeug.utils import secure_filename
 from app.sellers.models import Seller
 from app.developers.models import Developer
 from app.agents.models import Agent
@@ -19,10 +21,29 @@ from app.agents.models import Agent
 from app.extensions import db
 from app.properties import properties
 from app.properties.image_models import PropertyImage
-from app.properties.models import Amenity, Property, PropertyFeature
+from app.properties.models import Amenity, Property, PropertyDocument, PropertyFeature
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
+ALLOWED_DOCUMENT_EXTENSIONS = {"pdf", "jpg", "jpeg", "png"}
+MAX_DOCUMENT_SIZE = 20 * 1024 * 1024
+DOCUMENT_TYPES = (
+    "Title Deed",
+    "Lease Agreement",
+    "Sale Agreement",
+    "Survey Map",
+    "Mutation Form",
+    "Valuation Report",
+    "Architectural Drawing",
+    "Structural Drawing",
+    "Occupation Certificate",
+    "NEMA Approval",
+    "County Approval",
+    "Utility Bill",
+    "ID Copy",
+    "KRA PIN",
+    "Other",
+)
 
 
 def _relationship_options():
@@ -55,10 +76,25 @@ def _image_upload_folder():
     return folder
 
 
+def _document_upload_folder():
+    folder = os.path.join(
+        current_app.root_path, "static", "uploads", "property_documents"
+    )
+    os.makedirs(folder, exist_ok=True)
+    return folder
+
+
 def _has_allowed_extension(filename):
     return (
         "." in filename
         and filename.rsplit(".", 1)[1].lower() in ALLOWED_IMAGE_EXTENSIONS
+    )
+
+
+def _has_allowed_document_extension(filename):
+    return (
+        "." in filename
+        and filename.rsplit(".", 1)[1].lower() in ALLOWED_DOCUMENT_EXTENSIONS
     )
 
 
@@ -264,6 +300,119 @@ def details(id):
         "properties/details.html",
         property=property,
     )
+
+
+def _document_form_context(property=None):
+    return {
+        "property": property,
+        "properties": Property.query.order_by(Property.title).all(),
+        "document_types": DOCUMENT_TYPES,
+    }
+
+
+@properties.route("/documents")
+@login_required
+def documents():
+    property_id = request.args.get("property_id", type=int)
+    query = PropertyDocument.query
+    if property_id:
+        query = query.filter_by(property_id=property_id)
+    documents_list = query.order_by(PropertyDocument.uploaded_at.desc()).all()
+    return render_template(
+        "property_documents/index.html",
+        documents=documents_list,
+        selected_property_id=property_id,
+    )
+
+
+@properties.route("/documents/upload", methods=["GET", "POST"])
+@login_required
+def upload_document():
+    selected_property_id = request.args.get("property_id", type=int)
+    selected_property = (
+        Property.query.get(selected_property_id) if selected_property_id else None
+    )
+    if request.method == "POST":
+        property_id = request.form.get("property_id", "").strip()
+        document_type = request.form.get("document_type", "").strip()
+        uploaded_file = request.files.get("file")
+        selected_property = (
+            Property.query.get(int(property_id)) if property_id.isdigit() else None
+        )
+
+        if not selected_property:
+            flash("A valid property is required.", "danger")
+        elif document_type not in DOCUMENT_TYPES:
+            flash("Select a valid document type.", "danger")
+        elif not uploaded_file or not uploaded_file.filename:
+            flash("Select a document to upload.", "danger")
+        elif not _has_allowed_document_extension(uploaded_file.filename):
+            flash("Only PDF, JPG, JPEG, and PNG documents are allowed.", "danger")
+        elif _file_size(uploaded_file) > MAX_DOCUMENT_SIZE:
+            flash("Documents must be 20 MB or smaller.", "danger")
+        else:
+            original_filename = secure_filename(uploaded_file.filename)
+            extension = original_filename.rsplit(".", 1)[1].lower()
+            stored_filename = f"{uuid.uuid4().hex}.{extension}"
+            upload_folder = _document_upload_folder()
+            file_path = os.path.join(upload_folder, stored_filename)
+            uploaded_file.save(file_path)
+            document = PropertyDocument(
+                property_id=selected_property.id,
+                document_type=document_type,
+                document_name=original_filename,
+                file_name=stored_filename,
+                file_path=os.path.join(
+                    "uploads", "property_documents", stored_filename
+                ),
+                file_size=os.path.getsize(file_path),
+                file_extension=extension,
+                uploaded_by=(
+                    current_user.id if current_user.is_authenticated else None
+                ),
+                notes=request.form.get("notes", "").strip() or None,
+            )
+            try:
+                db.session.add(document)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                raise
+            flash("Document uploaded successfully.", "success")
+            return redirect(url_for("properties.details", id=selected_property.id))
+
+    return render_template(
+        "property_documents/upload.html",
+        **_document_form_context(selected_property),
+    )
+
+
+@properties.route("/documents/<int:id>/download")
+@login_required
+def download_document(id):
+    document = PropertyDocument.query.get_or_404(id)
+    return send_from_directory(
+        _document_upload_folder(),
+        document.file_name,
+        as_attachment=True,
+        download_name=document.document_name,
+    )
+
+
+@properties.route("/documents/<int:id>/delete", methods=["POST"])
+@login_required
+def delete_document(id):
+    document = PropertyDocument.query.get_or_404(id)
+    property_id = document.property_id
+    file_path = os.path.join(_document_upload_folder(), document.file_name)
+    db.session.delete(document)
+    db.session.commit()
+    if os.path.exists(file_path):
+        os.remove(file_path)
+    flash("Document deleted successfully.", "success")
+    return redirect(url_for("properties.details", id=property_id))
 
 
 @properties.route("/<int:id>/images")

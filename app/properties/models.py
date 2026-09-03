@@ -147,6 +147,13 @@ class Property(db.Model):
         "PropertyImage", backref="property", lazy=True, cascade="all, delete-orphan"
     )
 
+    documents = db.relationship(
+        "PropertyDocument",
+        back_populates="property",
+        lazy=True,
+        cascade="all, delete-orphan",
+    )
+
     amenities = db.relationship(
         "Amenity",
         secondary=property_amenities,
@@ -167,3 +174,29 @@ class Property(db.Model):
 
     def __repr__(self):
         return f"<Property {self.listing_number}>"
+
+
+class PropertyDocument(db.Model):
+    """Supporting document uploaded for a property."""
+
+    __tablename__ = "property_documents"
+
+    id = db.Column(db.Integer, primary_key=True)
+    property_id = db.Column(
+        db.Integer,
+        db.ForeignKey("properties.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    document_type = db.Column(db.String(100), nullable=False)
+    document_name = db.Column(db.String(255), nullable=False)
+    file_name = db.Column(db.String(255), nullable=False, unique=True)
+    file_path = db.Column(db.String(500), nullable=False)
+    file_size = db.Column(db.Integer, nullable=False)
+    file_extension = db.Column(db.String(10), nullable=False)
+    uploaded_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    verified = db.Column(db.Boolean, default=False, nullable=False)
+    notes = db.Column(db.Text, nullable=True)
+
+    property = db.relationship("Property", back_populates="documents")

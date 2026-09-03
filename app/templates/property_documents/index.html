@@ -1,0 +1,46 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Property Documents | IRURI™{% endblock %}
+
+{% block dashboard_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div>
+        <h2 class="mb-1">Property Documents</h2>
+        <p class="text-muted mb-0">Supporting documents across your properties.</p>
+    </div>
+    <a href="{{ url_for('properties.upload_document') }}" class="btn btn-primary">Upload Document</a>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover align-middle">
+        <thead>
+            <tr>
+                <th scope="col">Document</th>
+                <th scope="col">Property</th>
+                <th scope="col">Type</th>
+                <th scope="col">Verified</th>
+                <th scope="col">Download</th>
+                <th scope="col">Delete</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for document in documents %}
+            <tr>
+                <td>{{ document.document_name }}</td>
+                <td><a href="{{ url_for('properties.details', id=document.property.id) }}">{{ document.property.title }}</a></td>
+                <td>{{ document.document_type }}</td>
+                <td><span class="badge {{ 'bg-success' if document.verified else 'bg-secondary' }}">{{ 'Verified' if document.verified else 'Pending' }}</span></td>
+                <td><a href="{{ url_for('properties.download_document', id=document.id) }}" class="btn btn-sm btn-outline-primary">Download</a></td>
+                <td>
+                    <form method="POST" action="{{ url_for('properties.delete_document', id=document.id) }}">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="6" class="text-center text-muted py-4">No property documents uploaded.</td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

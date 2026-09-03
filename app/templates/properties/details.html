@@ -7,6 +7,56 @@
 {% block dashboard_content %}
 
 <div class="mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+        <h5 class="mb-0">Property Documents</h5>
+        <a href="{{ url_for('properties.upload_document') }}?property_id={{ property.id }}" class="btn btn-sm btn-outline-primary">
+            Upload Document
+        </a>
+    </div>
+
+    {% if property.documents %}
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+            <thead>
+                <tr>
+                    <th scope="col">Document</th>
+                    <th scope="col">Type</th>
+                    <th scope="col">Verified</th>
+                    <th scope="col">Download</th>
+                    <th scope="col">Delete</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for document in property.documents|sort(attribute='uploaded_at', reverse=true) %}
+                <tr>
+                    <td>{{ document.document_name }}</td>
+                    <td>{{ document.document_type }}</td>
+                    <td>
+                        <span class="badge {{ 'bg-success' if document.verified else 'bg-secondary' }}">
+                            {{ 'Verified' if document.verified else 'Pending' }}
+                        </span>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('properties.download_document', id=document.id) }}" class="btn btn-sm btn-outline-primary">Download</a>
+                    </td>
+                    <td>
+                        <form method="POST" action="{{ url_for('properties.delete_document', id=document.id) }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="card border-secondary-subtle">
+        <div class="card-body text-center text-muted">No property documents uploaded.</div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="mb-4">
 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h5 class="mb-0">Property Images</h5>
