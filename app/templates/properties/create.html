@@ -1,0 +1,148 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Add Property | IRURI™{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="row justify-content-center">
+
+    <div class="col-lg-8">
+
+        <div class="card shadow-sm">
+
+            <div class="card-header">
+                <h3 class="mb-0">Add New Property</h3>
+            </div>
+
+            <div class="card-body">
+
+                <form method="POST">
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Property Title
+                        </label>
+
+                        <input
+                            type="text"
+                            name="title"
+                            class="form-control"
+                            required>
+
+                    </div>
+
+                    <div class="row">
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label">
+                                Property Type
+                            </label>
+
+                            <select
+                                name="property_type"
+                                class="form-select"
+                                required>
+
+                                <option value="">Select...</option>
+                                <option>House</option>
+                                <option>Apartment</option>
+                                <option>Villa</option>
+                                <option>Maisonette</option>
+                                <option>Land</option>
+                                <option>Commercial</option>
+
+                            </select>
+
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+
+                            <label class="form-label">
+                                Listing Type
+                            </label>
+
+                            <select
+                                name="listing_type"
+                                class="form-select"
+                                required>
+
+                                <option>For Sale</option>
+                                <option>For Rent</option>
+                                <option>Short Stay</option>
+
+                            </select>
+
+                        </div>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            Price (KES)
+                        </label>
+
+                        <input
+                            type="number"
+                            name="price"
+                            class="form-control"
+                            required>
+
+                    </div>
+
+                    <div class="mb-3">
+
+                        <label class="form-label">
+                            County
+                        </label>
+
+                        <input
+                            type="text"
+                            name="county"
+                            class="form-control"
+                            required>
+
+                    </div>
+
+                    <div class="mb-4">
+
+                        <label class="form-label">
+                            Description
+                        </label>
+
+                        <textarea
+                            name="description"
+                            class="form-control"
+                            rows="5"></textarea>
+
+                    </div>
+
+                    <button
+                        type="submit"
+                        class="btn btn-primary">
+
+                        Save Property
+
+                    </button>
+
+                    <a
+                        href="{{ url_for('properties.index') }}"
+                        class="btn btn-secondary">
+
+                        Cancel
+
+                    </a>
+
+                </form>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}

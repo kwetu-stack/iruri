@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, redirect, url_for
 from app.dashboard import dashboard
 
 
@@ -21,9 +21,11 @@ def create_app():
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
+    from flask import redirect, url_for
+
     @app.route("/")
     def home():
-        return "<h1>Welcome to IRURI™</h1>"
+        return redirect(url_for("auth.login"))
 
     app.register_blueprint(auth)
     app.register_blueprint(dashboard)
