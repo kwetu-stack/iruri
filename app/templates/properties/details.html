@@ -69,6 +69,17 @@
                     {{ property.description or "No description provided." }}
                 </p>
 
+                <h5 class="card-title mb-3">Amenities</h5>
+                {% if property.amenities %}
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    {% for amenity in property.amenities|sort(attribute='name') %}
+                    <span class="badge bg-primary">✓ {{ amenity.name }}</span>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="text-muted mb-4">No amenities selected.</p>
+                {% endif %}
+
                 <dl class="row mb-4">
                     <dt class="col-sm-4">Owner</dt>
                     <dd class="col-sm-8">{{ property.seller.full_name or property.seller.company_name }}</dd>

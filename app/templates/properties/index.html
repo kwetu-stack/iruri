@@ -46,6 +46,7 @@ Properties | IRURI™
                     <th>Seller</th>
                     <th>Developer</th>
                     <th>Agent</th>
+                    <th>Amenities</th>
                     <th class="text-end">Price</th>
                     <th>Status</th>
                     <th class="text-center">Actions</th>
@@ -75,6 +76,8 @@ Properties | IRURI™
                     <td>{{ property.developer.company_name if property.developer else "Not Assigned" }}</td>
 
                     <td>{{ property.agent.full_name if property.agent else "Not Assigned" }}</td>
+
+                    <td>{% if property.amenities %}{{ property.amenities|length }} Amenities{% else %}No Amenities{% endif %}</td>
 
                     <td class="text-end">
                         KES {{ "{:,.0f}".format(property.price) }}
@@ -116,7 +119,7 @@ Properties | IRURI™
 
                 <tr>
 
-                    <td colspan="11" class="text-center py-5">
+                    <td colspan="12" class="text-center py-5">
 
                         <h5 class="mb-2">No Properties Found</h5>
 

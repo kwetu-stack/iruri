@@ -19,7 +19,7 @@ from app.agents.models import Agent
 from app.extensions import db
 from app.properties import properties
 from app.properties.image_models import PropertyImage
-from app.properties.models import Property
+from app.properties.models import Amenity, Property
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
@@ -30,6 +30,7 @@ def _relationship_options():
         "sellers": Seller.query.order_by(Seller.seller_number).all(),
         "developers": Developer.query.order_by(Developer.developer_number).all(),
         "agents": Agent.query.order_by(Agent.agent_number).all(),
+        "amenities": Amenity.query.order_by(Amenity.category, Amenity.name).all(),
     }
 
 
@@ -63,6 +64,90 @@ def _file_size(uploaded_file):
     size = uploaded_file.stream.tell()
     uploaded_file.stream.seek(0)
     return size
+
+
+def _selected_amenities():
+    amenity_ids = {
+        int(value) for value in request.form.getlist("amenity_ids") if value.isdigit()
+    }
+    return (
+        Amenity.query.filter(Amenity.id.in_(amenity_ids)).all() if amenity_ids else []
+    )
+
+
+def _amenity_form(template, amenity=None):
+    return render_template(template, amenity=amenity)
+
+
+@properties.route("/amenities")
+@login_required
+def amenities_index():
+    amenities = Amenity.query.order_by(Amenity.category, Amenity.name).all()
+    return render_template("amenities/index.html", amenities=amenities)
+
+
+@properties.route("/amenities/create", methods=["GET", "POST"])
+@login_required
+def amenities_create():
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        if not name:
+            flash("Amenity name is required.", "danger")
+            return _amenity_form("amenities/create.html")
+        if Amenity.query.filter(db.func.lower(Amenity.name) == name.lower()).first():
+            flash("An amenity with that name already exists.", "danger")
+            return _amenity_form("amenities/create.html")
+
+        db.session.add(
+            Amenity(
+                name=name,
+                icon=request.form.get("icon", "").strip() or None,
+                category=request.form.get("category", "").strip() or None,
+            )
+        )
+        db.session.commit()
+        flash("Amenity created successfully.", "success")
+        return redirect(url_for("properties.amenities_index"))
+
+    return _amenity_form("amenities/create.html")
+
+
+@properties.route("/amenities/<int:id>/edit", methods=["GET", "POST"])
+@login_required
+def amenities_edit(id):
+    amenity = Amenity.query.get_or_404(id)
+    if request.method == "POST":
+        name = request.form.get("name", "").strip()
+        duplicate = Amenity.query.filter(
+            db.func.lower(Amenity.name) == name.lower(), Amenity.id != amenity.id
+        ).first()
+        if not name:
+            flash("Amenity name is required.", "danger")
+            return _amenity_form("amenities/edit.html", amenity)
+        if duplicate:
+            flash("An amenity with that name already exists.", "danger")
+            return _amenity_form("amenities/edit.html", amenity)
+
+        amenity.name = name
+        amenity.icon = request.form.get("icon", "").strip() or None
+        amenity.category = request.form.get("category", "").strip() or None
+        db.session.commit()
+        flash("Amenity updated successfully.", "success")
+        return redirect(url_for("properties.amenities_index"))
+
+    return _amenity_form("amenities/edit.html", amenity)
+
+
+@properties.route("/amenities/<int:id>/delete", methods=["GET", "POST"])
+@login_required
+def amenities_delete(id):
+    amenity = Amenity.query.get_or_404(id)
+    if request.method == "POST":
+        db.session.delete(amenity)
+        db.session.commit()
+        flash("Amenity deleted successfully.", "success")
+        return redirect(url_for("properties.amenities_index"))
+    return render_template("amenities/delete.html", amenity=amenity)
 
 
 @properties.route("/")
@@ -245,6 +330,7 @@ def create():
             listing_type=request.form["listing_type"],
             price=float(request.form["price"]),
             county=request.form["county"],
+            amenities=_selected_amenities(),
         )
 
         db.session.add(property)
@@ -346,6 +432,7 @@ def edit(id):
         property.status = request.form.get("status", "").strip() or None
         property.featured = request.form.get("featured") == "on"
         property.verified = request.form.get("verified") == "on"
+        property.amenities = _selected_amenities()
 
         db.session.commit()
 

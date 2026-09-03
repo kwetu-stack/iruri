@@ -2,6 +2,41 @@ from datetime import datetime
 
 from app.extensions import db
 
+property_amenities = db.Table(
+    "property_amenities",
+    db.Column(
+        "property_id",
+        db.Integer,
+        db.ForeignKey("properties.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+    db.Column(
+        "amenity_id",
+        db.Integer,
+        db.ForeignKey("amenities.id", ondelete="CASCADE"),
+        primary_key=True,
+    ),
+)
+
+
+class Amenity(db.Model):
+    __tablename__ = "amenities"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    icon = db.Column(db.String(100), nullable=True)
+    category = db.Column(db.String(100), nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    properties = db.relationship(
+        "Property",
+        secondary=property_amenities,
+        back_populates="amenities",
+    )
+
+    def __repr__(self):
+        return f"<Amenity {self.name}>"
+
 
 class Property(db.Model):
     """IRURI Property Model"""
@@ -76,6 +111,13 @@ class Property(db.Model):
 
     images = db.relationship(
         "PropertyImage", backref="property", lazy=True, cascade="all, delete-orphan"
+    )
+
+    amenities = db.relationship(
+        "Amenity",
+        secondary=property_amenities,
+        back_populates="properties",
+        lazy="selectin",
     )
 
     seller = db.relationship("Seller", backref="properties")

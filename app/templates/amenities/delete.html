@@ -1,0 +1,5 @@
+{% extends "layouts/dashboard.html" %}
+{% block title %}Delete Amenity | IRURI™{% endblock %}
+{% block dashboard_content %}
+<div class="row justify-content-center"><div class="col-lg-6"><div class="card shadow-sm border-danger"><div class="card-header text-danger"><h3 class="mb-0">Delete Amenity</h3></div><div class="card-body"><p>Are you sure you want to permanently delete <strong>{{ amenity.name }}</strong>?</p><form method="POST"><button type="submit" class="btn btn-danger">Delete Amenity</button> <a href="{{ url_for('properties.amenities_index') }}" class="btn btn-secondary">Cancel</a></form></div></div></div></div>
+{% endblock %}

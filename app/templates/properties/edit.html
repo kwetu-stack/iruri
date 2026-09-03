@@ -131,6 +131,21 @@
                         <input type="text" name="status" class="form-control" value="{{ request.form.get('status', property.status or '') }}">
                     </div>
 
+                    <div class="mb-4">
+                        <label class="form-label">Amenities</label>
+                        {% set selected_amenity_ids = request.form.getlist('amenity_ids') if request.form else property.amenities|map(attribute='id')|map('string')|list %}
+                        <div class="row g-2">
+                            {% for amenity in amenities %}
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="amenity_ids" value="{{ amenity.id }}" id="amenity-{{ amenity.id }}" {% if amenity.id|string in selected_amenity_ids %}checked{% endif %}>
+                                    <label class="form-check-label" for="amenity-{{ amenity.id }}">{{ amenity.name }}</label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
                     <div class="form-check mb-2">
                         <input type="checkbox" name="featured" class="form-check-input" id="featured" {% if request.form.get('featured') == 'on' or (not request.form and property.featured) %}checked{% endif %}>
                         <label class="form-check-label" for="featured">Featured</label>
