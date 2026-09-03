@@ -32,5 +32,12 @@ class Seller(db.Model):
         db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
     )
 
+    sale_agreements = db.relationship(
+        "SaleAgreement",
+        back_populates="seller",
+        cascade="all, delete-orphan",
+        order_by="SaleAgreement.created_at.desc()",
+    )
+
     def __repr__(self):
         return f"<Seller {self.seller_number}>"

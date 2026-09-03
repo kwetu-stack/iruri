@@ -1,0 +1,14 @@
+{% extends "layouts/dashboard.html" %}
+{% block title %}{{ 'Edit' if agreement else 'Create' }} Sale Agreement | IRURI{% endblock %}
+{% block dashboard_content %}
+<div class="card shadow-sm border-0"><div class="card-header"><h3 class="mb-0">{{ 'Edit' if agreement else 'Create' }} Sale Agreement</h3></div><div class="card-body">
+<p class="text-muted">Reservation {{ reservation.reservation_number }} for {{ reservation.property.title }}</p>
+<form method="POST"><div class="row g-3">
+<div class="col-md-6"><label class="form-label" for="agreed_price">Agreed Price</label><input class="form-control" id="agreed_price" name="agreed_price" type="number" min="0.01" step="0.01" required value="{{ request.form.get('agreed_price', agreement.agreed_price if agreement else reservation.property_offer.offered_price) }}"></div>
+<div class="col-md-6"><label class="form-label" for="currency">Currency</label><input class="form-control" id="currency" name="currency" maxlength="10" required value="{{ request.form.get('currency', agreement.currency if agreement else reservation.currency) }}"></div>
+<div class="col-md-6"><label class="form-label" for="agreement_date">Agreement Date</label><input class="form-control" id="agreement_date" name="agreement_date" type="date" required value="{{ request.form.get('agreement_date', agreement.agreement_date.isoformat() if agreement else today) }}"></div>
+<div class="col-md-6"><label class="form-label" for="completion_date">Completion Date</label><input class="form-control" id="completion_date" name="completion_date" type="date" required value="{{ request.form.get('completion_date', agreement.completion_date.isoformat() if agreement else '') }}"></div>
+<div class="col-12"><label class="form-label" for="notes">Notes</label><textarea class="form-control" id="notes" name="notes" rows="4">{{ request.form.get('notes', agreement.notes if agreement else '') }}</textarea></div>
+</div><div class="d-flex gap-2 mt-4"><button class="btn btn-primary" type="submit">Save Agreement</button><a class="btn btn-secondary" href="{{ url_for('reservations.details', id=reservation.id) }}">Cancel</a></div></form>
+</div></div>
+{% endblock %}

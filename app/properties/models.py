@@ -253,6 +253,13 @@ class Property(db.Model):
         order_by="PropertyReservation.reservation_date.desc()",
     )
 
+    sale_agreements = db.relationship(
+        "SaleAgreement",
+        back_populates="property",
+        cascade="all, delete-orphan",
+        order_by="SaleAgreement.created_at.desc()",
+    )
+
     seller = db.relationship("Seller", backref="properties")
     developer = db.relationship("Developer", backref="properties")
     agent = db.relationship("Agent", backref="properties")
