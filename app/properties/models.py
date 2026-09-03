@@ -232,6 +232,13 @@ class Property(db.Model):
         order_by="SavedProperty.saved_at.desc()",
     )
 
+    viewing_requests = db.relationship(
+        "ViewingRequest",
+        back_populates="property",
+        cascade="all, delete-orphan",
+        order_by="ViewingRequest.requested_date.asc()",
+    )
+
     seller = db.relationship("Seller", backref="properties")
     developer = db.relationship("Developer", backref="properties")
     agent = db.relationship("Agent", backref="properties")

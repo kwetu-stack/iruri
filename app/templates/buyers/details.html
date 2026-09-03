@@ -3,6 +3,25 @@
 {% block dashboard_content %}
 <div class="card shadow-sm border-0 mb-4">
 	<div class="card-body">
+		<h5 class="card-title mb-3">Buyer Activity</h5>
+		<div class="row g-3">
+			<div class="col-sm-6"><span class="text-muted d-block">Saved Properties</span><strong>{{ buyer.saved_properties|length }}</strong></div>
+			<div class="col-sm-6"><span class="text-muted d-block">Viewing Requests</span><strong>{{ buyer.viewing_requests|length }}</strong></div>
+		</div>
+	</div>
+</div>
+<div class="card shadow-sm border-0 mb-4">
+	<div class="card-body">
+		<div class="d-flex justify-content-between align-items-center mb-3"><h5 class="card-title mb-0">Viewing Requests</h5><span class="badge bg-secondary">{{ buyer.viewing_requests|length }}</span></div>
+		{% if buyer.viewing_requests %}
+		<div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Property</th><th>Date</th><th>Time</th><th>Status</th><th>Action</th></tr></thead><tbody>
+		{% for viewing in buyer.viewing_requests %}<tr><td><a href="{{ url_for('properties.details', id=viewing.property.id) }}">{{ viewing.property.title }}</a></td><td>{{ viewing.requested_date.strftime('%d %b %Y') }}</td><td>{{ viewing.requested_time.strftime('%H:%M') }}</td><td>{{ viewing.status }}</td><td><a href="{{ url_for('viewings.edit', id=viewing.id) }}" class="btn btn-sm btn-outline-primary">View</a></td></tr>{% endfor %}
+		</tbody></table></div>
+		{% else %}<p class="text-muted mb-0">No viewing requests yet.</p>{% endif %}
+	</div>
+</div>
+<div class="card shadow-sm border-0 mb-4">
+	<div class="card-body">
 		<div class="d-flex justify-content-between align-items-center mb-3">
 			<h5 class="card-title mb-0">Saved Properties</h5>
 			<span class="badge bg-secondary">{{ buyer.saved_properties|length }}</span>

@@ -45,5 +45,12 @@ class Buyer(db.Model):
         order_by="SavedProperty.saved_at.desc()",
     )
 
+    viewing_requests = db.relationship(
+        "ViewingRequest",
+        back_populates="buyer",
+        cascade="all, delete-orphan",
+        order_by="ViewingRequest.requested_date.asc()",
+    )
+
     def __repr__(self):
         return f"<Buyer {self.buyer_number}>"

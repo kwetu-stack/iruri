@@ -198,6 +198,10 @@
     </form>
     {% endif %}
 
+    <a href="{{ url_for('viewings.create') }}?property_id={{ property.id }}{% if current_buyer %}&buyer_id={{ current_buyer.id }}{% endif %}" class="btn btn-primary">
+        Request Viewing
+    </a>
+
     <span class="badge bg-success fs-6">
         {{ property.status or "Status unavailable" }}
     </span>
@@ -419,6 +423,43 @@
 
     </div>
 
+</div>
+
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+            <h5 class="card-title mb-0">Viewing Requests</h5>
+            <div class="d-flex gap-2">
+                {% set pending_count = property.viewing_requests|selectattr('status', 'equalto', 'Pending')|list|length %}
+                {% set confirmed_count = property.viewing_requests|selectattr('status', 'equalto', 'Confirmed')|list|length %}
+                {% set completed_count = property.viewing_requests|selectattr('status', 'equalto', 'Completed')|list|length %}
+                <span class="badge bg-secondary">{{ property.viewing_requests|length }} Total</span>
+                <span class="badge bg-warning text-dark">{{ pending_count }} Pending</span>
+                <span class="badge bg-primary">{{ confirmed_count }} Confirmed</span>
+                <span class="badge bg-success">{{ completed_count }} Completed</span>
+            </div>
+        </div>
+        {% if property.viewing_requests %}
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead><tr><th>Buyer</th><th>Preferred Date</th><th>Preferred Time</th><th>Status</th><th>Assigned Agent</th></tr></thead>
+                <tbody>
+                    {% for viewing in property.viewing_requests %}
+                    <tr>
+                        <td>{{ viewing.buyer.full_name or viewing.buyer.company_name }}</td>
+                        <td>{{ viewing.requested_date.strftime('%d %b %Y') }}</td>
+                        <td>{{ viewing.requested_time.strftime('%H:%M') }}</td>
+                        <td><span class="badge bg-{{ 'warning text-dark' if viewing.status == 'Pending' else 'success' if viewing.status == 'Completed' else 'primary' if viewing.status == 'Confirmed' else 'secondary' }}">{{ viewing.status }}</span></td>
+                        <td>{{ viewing.agent.full_name if viewing.agent else 'Not Assigned' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="text-muted mb-0">No viewing requests yet.</p>
+        {% endif %}
+    </div>
 </div>
 
 <div class="d-flex flex-wrap gap-2 mt-4">
