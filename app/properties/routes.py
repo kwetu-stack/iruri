@@ -17,13 +17,23 @@ from app.properties.models import Property
 @login_required
 def index():
 
-    properties_list = Property.query.order_by(
-        Property.created_at.desc()
-    ).all()
+    properties_list = Property.query.order_by(Property.created_at.desc()).all()
 
     return render_template(
         "properties/index.html",
         properties=properties_list,
+    )
+
+
+@properties.route("/<int:id>")
+@login_required
+def details(id):
+
+    property = Property.query.get_or_404(id)
+
+    return render_template(
+        "properties/details.html",
+        property=property,
     )
 
 
@@ -46,9 +56,7 @@ def create():
         db.session.add(property)
         db.session.flush()
 
-        property.listing_number = (
-            f"IRR-2026-{property.id:06d}"
-        )
+        property.listing_number = f"IRR-2026-{property.id:06d}"
 
         db.session.commit()
 
@@ -57,10 +65,6 @@ def create():
             "success",
         )
 
-        return redirect(
-            url_for("properties.index")
-        )
+        return redirect(url_for("properties.index"))
 
-    return render_template(
-        "properties/create.html"
-    )
+    return render_template("properties/create.html")

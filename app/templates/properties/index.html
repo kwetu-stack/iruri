@@ -81,9 +81,11 @@ Properties | IRURI™
 
                     <td class="text-center">
 
-                        <button class="btn btn-sm btn-outline-primary">
+                        <a
+                            href="{{ url_for('properties.details', id=property.id) }}"
+                            class="btn btn-sm btn-outline-primary">
                             View
-                        </button>
+                        </a>
 
                         <button class="btn btn-sm btn-outline-warning">
                             Edit

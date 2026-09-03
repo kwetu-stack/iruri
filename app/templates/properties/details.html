@@ -1,0 +1,205 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}
+{{ property.title }} | IRURI
+{% endblock %}
+
+{% block dashboard_content %}
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+
+    <div>
+
+        <h2 class="mb-1">{{ property.title }}</h2>
+
+        <p class="text-muted mb-0">
+            Listing {{ property.listing_number }}
+        </p>
+
+    </div>
+
+    <span class="badge bg-success fs-6">
+        {{ property.status or "Status unavailable" }}
+    </span>
+
+</div>
+
+<div class="row g-4">
+
+    <div class="col-lg-7">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body">
+
+                <h5 class="card-title mb-3">Property Overview</h5>
+
+                <p class="text-muted">
+                    {{ property.description or "No description provided." }}
+                </p>
+
+                <div class="row g-3">
+
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Property Type</small>
+                        <span>{{ property.property_type or "Not specified" }}</span>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Listing Type</small>
+                        <span>{{ property.listing_type or "Not specified" }}</span>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Price</small>
+                        <span class="fw-semibold">
+                            {{ property.currency or "KES" }} {{ "{:,.2f}".format(property.price or 0) }}
+                        </span>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Currency</small>
+                        <span>{{ property.currency or "Not specified" }}</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-lg-5">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body">
+
+                <h5 class="card-title mb-3">Location</h5>
+
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">County</dt>
+                    <dd class="col-sm-8">{{ property.county or "Not specified" }}</dd>
+
+                    <dt class="col-sm-4">Town</dt>
+                    <dd class="col-sm-8">{{ property.town or "Not specified" }}</dd>
+
+                    <dt class="col-sm-4">Estate</dt>
+                    <dd class="col-sm-8">{{ property.estate or "Not specified" }}</dd>
+
+                    <dt class="col-sm-4">Address</dt>
+                    <dd class="col-sm-8">{{ property.address or "Not specified" }}</dd>
+                </dl>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-lg-7">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body">
+
+                <h5 class="card-title mb-3">Property Details</h5>
+
+                <div class="row g-3">
+
+                    <div class="col-sm-4">
+                        <small class="text-muted d-block">Bedrooms</small>
+                        <span>{{ property.bedrooms if property.bedrooms is not none else "Not specified" }}</span>
+                    </div>
+
+                    <div class="col-sm-4">
+                        <small class="text-muted d-block">Bathrooms</small>
+                        <span>{{ property.bathrooms if property.bathrooms is not none else "Not specified" }}</span>
+                    </div>
+
+                    <div class="col-sm-4">
+                        <small class="text-muted d-block">Parking</small>
+                        <span>{{ property.parking if property.parking is not none else "Not specified" }}</span>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Floor Area</small>
+                        <span>{{ property.floor_area if property.floor_area is not none else "Not specified" }}</span>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Land Size</small>
+                        <span>{{ property.land_size if property.land_size is not none else "Not specified" }}</span>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <div class="col-lg-5">
+
+        <div class="card shadow-sm border-0 h-100">
+
+            <div class="card-body">
+
+                <h5 class="card-title mb-3">Listing Information</h5>
+
+                <dl class="row mb-0">
+                    <dt class="col-sm-6">Featured</dt>
+                    <dd class="col-sm-6">
+                        <span class="badge {{ 'bg-primary' if property.featured else 'bg-secondary' }}">
+                            {{ "Yes" if property.featured else "No" }}
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-6">Verified</dt>
+                    <dd class="col-sm-6">
+                        <span class="badge {{ 'bg-success' if property.verified else 'bg-secondary' }}">
+                            {{ "Yes" if property.verified else "No" }}
+                        </span>
+                    </dd>
+
+                    <dt class="col-sm-6">Views</dt>
+                    <dd class="col-sm-6">{{ property.views if property.views is not none else 0 }}</dd>
+
+                    <dt class="col-sm-6">Created Date</dt>
+                    <dd class="col-sm-6">
+                        {{ property.created_at.strftime('%d %b %Y, %H:%M') if property.created_at else "Not available" }}
+                    </dd>
+
+                    <dt class="col-sm-6">Updated Date</dt>
+                    <dd class="col-sm-6">
+                        {{ property.updated_at.strftime('%d %b %Y, %H:%M') if property.updated_at else "Not available" }}
+                    </dd>
+                </dl>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<div class="d-flex flex-wrap gap-2 mt-4">
+
+    <a href="{{ url_for('properties.index') }}" class="btn btn-secondary">
+        Back to Properties
+    </a>
+
+    <a href="#" class="btn btn-warning">
+        Edit Property
+    </a>
+
+    <a href="#" class="btn btn-danger">
+        Delete Property
+    </a>
+
+</div>
+
+{% endblock %}
