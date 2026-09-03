@@ -262,6 +262,9 @@ class Property(db.Model):
     commissions = db.relationship(
         "PropertyCommission", back_populates="property", cascade="all, delete-orphan"
     )
+    transactions = db.relationship(
+        "PropertyTransaction", back_populates="property", cascade="all, delete-orphan"
+    )
 
     seller = db.relationship("Seller", backref="properties")
     developer = db.relationship("Developer", backref="properties")

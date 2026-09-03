@@ -35,6 +35,7 @@ from app.properties.models import (
     PropertyVideo,
     SavedProperty,
 )
+from app.transactions.models import PropertyTransaction
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
@@ -67,6 +68,10 @@ def _current_buyer():
     if not current_user.is_authenticated or not current_user.email:
         return None
     return Buyer.query.filter_by(email=current_user.email).first()
+
+
+def _is_admin():
+    return (current_user.role or "").lower() in {"admin", "administrator"}
 
 
 def _relationship_options():
@@ -987,6 +992,15 @@ def create():
 def edit(id):
 
     property = Property.query.get_or_404(id)
+    if (
+        property.status == "Sold"
+        or PropertyTransaction.query.filter_by(
+            property_id=property.id, transaction_status="Completed"
+        ).first()
+    ):
+        if not _is_admin():
+            flash("Sold properties are read-only.", "danger")
+            return redirect(url_for("properties.details", id=property.id))
 
     if request.method == "POST":
         seller_id = request.form.get("seller_id", "").strip()

@@ -7,6 +7,7 @@ from sqlalchemy.exc import IntegrityError
 
 from app.buyers.models import Buyer
 from app.extensions import db
+from app.transactions.models import PropertyTransaction
 from app.offers.models import PropertyOffer
 from app.reservations import reservations
 from app.reservations.models import PropertyReservation
@@ -121,6 +122,14 @@ def create(offer_id):
     if offer.status != "Accepted":
         flash("A reservation requires an accepted offer.", "danger")
         return redirect(url_for("offers.review", id=offer.id))
+    if (
+        offer.property.status == "Sold"
+        or PropertyTransaction.query.filter_by(
+            property_id=offer.property_id, transaction_status="Completed"
+        ).first()
+    ):
+        flash("Sold properties do not accept new reservations.", "danger")
+        return redirect(url_for("properties.details", id=offer.property_id))
     if not (buyer and buyer.id == offer.buyer_id) and not _can_review(offer):
         flash("You are not authorized to create this reservation.", "danger")
         return redirect(url_for("properties.details", id=offer.property_id))

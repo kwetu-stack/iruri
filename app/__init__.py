@@ -17,6 +17,7 @@ from app.viewings import viewings
 from app.offers import offers
 from app.reservations import reservations
 from app.sale_agreements import sale_agreements
+from app.transactions import transactions
 from app.properties.models import Amenity
 
 import app.models
@@ -77,6 +78,7 @@ def create_app():
     app.register_blueprint(offers)
     app.register_blueprint(reservations)
     app.register_blueprint(sale_agreements)
+    app.register_blueprint(transactions)
 
     with app.app_context():
         seed_default_amenities()

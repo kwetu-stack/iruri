@@ -11,6 +11,7 @@ from app.offers import offers
 from app.offers.models import OFFER_STATUSES, OfferNegotiation, PropertyOffer
 from app.properties.models import Property
 from app.sellers.models import Seller
+from app.transactions.models import PropertyTransaction
 
 
 def _current_buyer():
@@ -97,6 +98,14 @@ def create():
     if not buyer:
         flash("A buyer profile is required to submit an offer.", "danger")
         return redirect(url_for("properties.index"))
+    if property and (
+        property.status == "Sold"
+        or PropertyTransaction.query.filter_by(
+            property_id=property.id, transaction_status="Completed"
+        ).first()
+    ):
+        flash("Sold properties do not accept new offers.", "danger")
+        return redirect(url_for("properties.details", id=property.id))
 
     if request.method == "POST":
         property_id = request.form.get("property_id", type=int)
@@ -104,7 +113,14 @@ def create():
         amount = _parse_amount(request.form.get("offered_price", ""))
         currency = request.form.get("currency", "").strip().upper() or "KES"
         message = request.form.get("buyer_message", "").strip() or None
-        if not property:
+        if property and (
+            property.status == "Sold"
+            or PropertyTransaction.query.filter_by(
+                property_id=property.id, transaction_status="Completed"
+            ).first()
+        ):
+            flash("Sold properties do not accept new offers.", "danger")
+        elif not property:
             flash("Property is required.", "danger")
         elif not amount:
             flash("Offer amount must be greater than zero.", "danger")
@@ -140,6 +156,14 @@ def review(id):
         return redirect(url_for("properties.details", id=offer.property_id))
 
     if request.method == "POST":
+        if (
+            offer.property.status == "Sold"
+            or PropertyTransaction.query.filter_by(
+                property_id=offer.property_id, transaction_status="Completed"
+            ).first()
+        ):
+            flash("Negotiation history is locked for sold properties.", "danger")
+            return redirect(url_for("offers.review", id=offer.id))
         status = request.form.get("status", "").strip()
         agent_id = request.form.get("agent_id", type=int)
         if not _change_status(offer, status):
@@ -179,6 +203,14 @@ def counter_offer(id):
         return redirect(url_for("properties.details", id=offer.property_id))
     if not _active_offer(offer):
         flash("This offer is no longer open for negotiation.", "danger")
+        return redirect(url_for("offers.review", id=offer.id))
+    if (
+        offer.property.status == "Sold"
+        or PropertyTransaction.query.filter_by(
+            property_id=offer.property_id, transaction_status="Completed"
+        ).first()
+    ):
+        flash("Negotiation history is locked for sold properties.", "danger")
         return redirect(url_for("offers.review", id=offer.id))
 
     if request.method == "POST":

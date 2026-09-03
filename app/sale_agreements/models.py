@@ -101,6 +101,11 @@ class SaleAgreement(db.Model):
         back_populates="sale_agreement",
         cascade="all, delete-orphan",
     )
+    transactions = db.relationship(
+        "PropertyTransaction",
+        back_populates="sale_agreement",
+        cascade="all, delete-orphan",
+    )
 
     @hybrid_property
     def total_paid(self):

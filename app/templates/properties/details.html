@@ -6,6 +6,8 @@
 {% endblock %}
 
 {% block dashboard_content %}
+{% set completed_transaction = property.transactions|selectattr('transaction_status', 'equalto', 'Completed')|list|first %}
+{% if completed_transaction %}<div class="card shadow-sm border-0 mb-4"><div class="card-header"><h5 class="mb-0">Transaction Summary</h5></div><div class="card-body"><dl class="row mb-0"><dt class="col-sm-3">Buyer</dt><dd class="col-sm-9">{{ completed_transaction.buyer.full_name or completed_transaction.buyer.company_name }}</dd><dt class="col-sm-3">Seller</dt><dd class="col-sm-9">{{ completed_transaction.seller.full_name or completed_transaction.seller.company_name }}</dd><dt class="col-sm-3">Final Price</dt><dd class="col-sm-9">{{ completed_transaction.currency }} {{ '{:,.2f}'.format(completed_transaction.final_sale_price) }}</dd><dt class="col-sm-3">Completion Date</dt><dd class="col-sm-9">{{ completed_transaction.completion_date.strftime('%d %b %Y') }}</dd><dt class="col-sm-3">Transaction Number</dt><dd class="col-sm-9"><a href="{{ url_for('transactions.details', id=completed_transaction.id) }}">{{ completed_transaction.transaction_number }}</a></dd></dl></div></div>{% endif %}
 
 <div class="mb-4">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">

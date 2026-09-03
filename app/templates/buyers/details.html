@@ -1,6 +1,7 @@
 {% extends "layouts/dashboard.html" %}
 {% block title %}{{ buyer.full_name or buyer.company_name }} | IRURI{% endblock %}
 {% block dashboard_content %}
+<div class="card shadow-sm border-0 mb-4"><div class="card-body"><h5 class="card-title">Completed Purchases</h5><div class="table-responsive"><table class="table table-hover mb-0"><thead><tr><th>Transaction</th><th>Property</th><th>Price</th><th>Date</th></tr></thead><tbody>{% for item in buyer.transactions|sort(attribute='completion_date', reverse=true) %}<tr><td><a href="{{ url_for('transactions.details', id=item.id) }}">{{ item.transaction_number }}</a></td><td>{{ item.property.title }}</td><td>{{ item.currency }} {{ '{:,.2f}'.format(item.final_sale_price) }}</td><td>{{ item.completion_date.strftime('%d %b %Y') }}</td></tr>{% else %}<tr><td colspan="4" class="text-muted">No completed purchases yet.</td></tr>{% endfor %}</tbody></table></div></div></div>
 <div class="card shadow-sm border-0 mb-4">
 	<div class="card-body">
 		<h5 class="card-title mb-3">Buyer Activity</h5>

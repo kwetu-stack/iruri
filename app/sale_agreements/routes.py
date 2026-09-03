@@ -15,6 +15,7 @@ from app.sale_agreements.models import (
     PropertyPayment,
     SaleAgreement,
 )
+from app.transactions.models import PropertyTransaction
 
 
 def _is_admin():
@@ -208,6 +209,14 @@ def create(reservation_id):
     if reservation.status != "Active":
         flash("A sale agreement requires an active reservation.", "danger")
         return redirect(url_for("reservations.details", id=reservation.id))
+    if (
+        reservation.property.status == "Sold"
+        or PropertyTransaction.query.filter_by(
+            property_id=reservation.property_id, transaction_status="Completed"
+        ).first()
+    ):
+        flash("Sold properties do not accept new sale agreements.", "danger")
+        return redirect(url_for("properties.details", id=reservation.property_id))
     if SaleAgreement.query.filter_by(
         reservation_id=reservation.id, status="Active"
     ).first():
@@ -426,9 +435,23 @@ def activate(id):
 @sale_agreements.route("/<int:id>/complete", methods=["POST"])
 @login_required
 def complete(id):
-    return _change_status(
-        id, "Completed", {"Active"}, "Sale agreement marked completed."
-    )
+    agreement = SaleAgreement.query.get_or_404(id)
+    if not _can_access(agreement):
+        flash("You are not authorized to update this agreement.", "danger")
+    elif agreement.status != "Active":
+        flash("Only active agreements can be marked completed.", "danger")
+    elif agreement.outstanding_balance != Decimal("0.00"):
+        flash("The outstanding payment balance must be zero first.", "danger")
+    elif not agreement.commissions or any(
+        item.payment_status != "Paid" for item in agreement.commissions
+    ):
+        flash("All commissions must be fully paid first.", "danger")
+    else:
+        agreement.status = "Completed"
+        agreement.property.status = "Ready for Transfer"
+        db.session.commit()
+        flash("Sale agreement marked completed.", "success")
+    return redirect(url_for("sale_agreements.details", id=id))
 
 
 @sale_agreements.route("/<int:id>/cancel", methods=["POST"])

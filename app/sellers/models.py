@@ -41,6 +41,7 @@ class Seller(db.Model):
     commissions = db.relationship(
         "PropertyCommission", back_populates="seller", cascade="all, delete-orphan"
     )
+    transactions = db.relationship("PropertyTransaction", back_populates="seller")
 
     def __repr__(self):
         return f"<Seller {self.seller_number}>"

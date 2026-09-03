@@ -72,6 +72,7 @@ class Buyer(db.Model):
         cascade="all, delete-orphan",
         order_by="SaleAgreement.created_at.desc()",
     )
+    transactions = db.relationship("PropertyTransaction", back_populates="buyer")
 
     def __repr__(self):
         return f"<Buyer {self.buyer_number}>"
