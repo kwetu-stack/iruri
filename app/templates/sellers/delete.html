@@ -1,0 +1,5 @@
+{% extends "layouts/dashboard.html" %}
+{% block title %}Delete Seller | IRURI{% endblock %}
+{% block dashboard_content %}
+<div class="row justify-content-center"><div class="col-lg-6"><div class="card shadow-sm border-danger"><div class="card-header text-danger"><h3 class="mb-0">Delete Seller</h3></div><div class="card-body"><p>Are you sure you want to delete <strong>{{ seller.full_name or seller.company_name }}</strong> ({{ seller.seller_number }})?</p><p class="text-muted">This action cannot be undone.</p><form method="POST"><button type="submit" class="btn btn-danger">Delete Seller</button> <a href="{{ url_for('sellers.details', id=seller.id) }}" class="btn btn-secondary">Cancel</a></form></div></div></div></div>
+{% endblock %}

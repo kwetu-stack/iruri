@@ -1,0 +1,19 @@
+{% extends "layouts/dashboard.html" %}
+{% block title %}Sellers | IRURI{% endblock %}
+{% block dashboard_content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div><h2>Sellers</h2><p class="text-muted mb-0">Manage property owners and selling entities.</p></div>
+    <a href="{{ url_for('sellers.create') }}" class="btn btn-primary">+ Add Seller</a>
+</div>
+<div class="card shadow-sm border-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0">
+<thead class="table-light"><tr><th>Seller No.</th><th>Photo</th><th>Name</th><th>Seller Type</th><th>Phone</th><th>County</th><th>Verified</th><th>Status</th><th class="text-center">Actions</th></tr></thead>
+<tbody>{% for seller in sellers %}<tr>
+<td>{{ seller.seller_number }}</td>
+<td>{% if seller.profile_photo %}<img src="{{ url_for('static', filename='uploads/sellers/' ~ seller.profile_photo) }}" alt="Seller photo" class="rounded-circle" width="48" height="48" style="object-fit: cover;">{% else %}<div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">{{ (seller.full_name or seller.company_name or '?')[0] }}</div>{% endif %}</td>
+<td>{{ seller.full_name or seller.company_name }}</td><td>{{ seller.seller_type }}</td><td>{{ seller.phone }}</td><td>{{ seller.county or "Not specified" }}</td>
+<td><span class="badge {{ 'bg-success' if seller.verified else 'bg-secondary' }}">{{ "Verified" if seller.verified else "Not verified" }}</span></td>
+<td><span class="badge {{ 'bg-success' if seller.active else 'bg-secondary' }}">{{ "Active" if seller.active else "Inactive" }}</span></td>
+<td class="text-center"><a href="{{ url_for('sellers.details', id=seller.id) }}" class="btn btn-sm btn-outline-primary">View</a> <a href="{{ url_for('sellers.edit', id=seller.id) }}" class="btn btn-sm btn-outline-warning">Edit</a> <a href="{{ url_for('sellers.delete', id=seller.id) }}" class="btn btn-sm btn-outline-danger">Delete</a></td>
+</tr>{% else %}<tr><td colspan="9" class="text-center py-5"><h5 class="mb-2">No Sellers Found</h5><p class="text-muted mb-0">Your first seller will appear here.</p></td></tr>{% endfor %}</tbody>
+</table></div></div>
+{% endblock %}

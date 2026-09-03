@@ -9,6 +9,7 @@ from app.properties import properties
 from app.agents import agents
 from app.agencies import agencies
 from app.developers import developers
+from app.sellers import sellers
 
 import app.models
 
@@ -36,5 +37,6 @@ def create_app():
     app.register_blueprint(agents)
     app.register_blueprint(agencies)
     app.register_blueprint(developers)
+    app.register_blueprint(sellers)
 
     return app
