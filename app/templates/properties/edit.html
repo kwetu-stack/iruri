@@ -28,6 +28,43 @@
                         <textarea name="description" class="form-control" rows="5">{{ request.form.get('description', property.description or '') }}</textarea>
                     </div>
 
+                    <div class="mb-3">
+                        <label class="form-label">Seller</label>
+                        <select name="seller_id" class="form-select" required>
+                            <option value="">Select seller...</option>
+                            {% for seller in sellers %}
+                            <option value="{{ seller.id }}" {% if request.form.get('seller_id', property.seller_id|string) == seller.id|string %}selected{% endif %}>
+                                {{ seller.seller_number }} - {{ seller.full_name or seller.company_name or 'Unnamed Seller' }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Developer</label>
+                            <select name="developer_id" class="form-select">
+                                <option value="">Not Assigned</option>
+                                {% for developer in developers %}
+                                <option value="{{ developer.id }}" {% if request.form.get('developer_id', property.developer_id|string if property.developer_id else '') == developer.id|string %}selected{% endif %}>
+                                    {{ developer.developer_number }} - {{ developer.company_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Agent</label>
+                            <select name="agent_id" class="form-select">
+                                <option value="">Not Assigned</option>
+                                {% for agent in agents %}
+                                <option value="{{ agent.id }}" {% if request.form.get('agent_id', property.agent_id|string if property.agent_id else '') == agent.id|string %}selected{% endif %}>
+                                    {{ agent.agent_number }} - {{ agent.full_name }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label class="form-label">Property Type</label>

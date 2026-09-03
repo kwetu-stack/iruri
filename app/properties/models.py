@@ -10,6 +10,24 @@ class Property(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
 
+    seller_id = db.Column(
+        db.Integer,
+        db.ForeignKey("sellers.id"),
+        nullable=False,
+    )
+
+    developer_id = db.Column(
+        db.Integer,
+        db.ForeignKey("developers.id"),
+        nullable=True,
+    )
+
+    agent_id = db.Column(
+        db.Integer,
+        db.ForeignKey("agents.id"),
+        nullable=True,
+    )
+
     listing_number = db.Column(db.String(30), unique=True, nullable=False)
 
     title = db.Column(db.String(200), nullable=False)
@@ -59,6 +77,10 @@ class Property(db.Model):
     images = db.relationship(
         "PropertyImage", backref="property", lazy=True, cascade="all, delete-orphan"
     )
+
+    seller = db.relationship("Seller", backref="properties")
+    developer = db.relationship("Developer", backref="properties")
+    agent = db.relationship("Agent", backref="properties")
 
     def __repr__(self):
         return f"<Property {self.listing_number}>"

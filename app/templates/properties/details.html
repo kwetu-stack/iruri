@@ -69,6 +69,15 @@
                     {{ property.description or "No description provided." }}
                 </p>
 
+                <dl class="row mb-4">
+                    <dt class="col-sm-4">Owner</dt>
+                    <dd class="col-sm-8">{{ property.seller.full_name or property.seller.company_name }}</dd>
+                    <dt class="col-sm-4">Developer</dt>
+                    <dd class="col-sm-8">{{ property.developer.company_name if property.developer else "Not Assigned" }}</dd>
+                    <dt class="col-sm-4">Listing Agent</dt>
+                    <dd class="col-sm-8">{{ property.agent.full_name if property.agent else "Not Assigned" }}</dd>
+                </dl>
+
                 <div class="row g-3">
 
                     <div class="col-sm-6">

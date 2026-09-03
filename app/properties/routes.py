@@ -11,6 +11,10 @@ from flask import (
 )
 
 from flask_login import login_required
+from app.sellers.models import Seller
+from app.developers.models import Developer
+from app.agents.models import Agent
+
 
 from app.extensions import db
 from app.properties import properties
@@ -19,6 +23,21 @@ from app.properties.models import Property
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
+
+
+def _relationship_options():
+    return {
+        "sellers": Seller.query.order_by(Seller.seller_number).all(),
+        "developers": Developer.query.order_by(Developer.developer_number).all(),
+        "agents": Agent.query.order_by(Agent.agent_number).all(),
+    }
+
+
+def _render_property_form(template, property=None):
+    context = _relationship_options()
+    if property is not None:
+        context["property"] = property
+    return render_template(template, **context)
 
 
 def _image_upload_folder():
@@ -196,9 +215,30 @@ def delete_image(id):
 def create():
 
     if request.method == "POST":
+        seller_id = request.form.get("seller_id", "").strip()
+        developer_id = request.form.get("developer_id", "").strip()
+        agent_id = request.form.get("agent_id", "").strip()
+        seller = Seller.query.get(int(seller_id)) if seller_id.isdigit() else None
+        developer = (
+            Developer.query.get(int(developer_id)) if developer_id.isdigit() else None
+        )
+        agent = Agent.query.get(int(agent_id)) if agent_id.isdigit() else None
+
+        if not seller:
+            flash("A seller is required.", "danger")
+            return _render_property_form("properties/create.html")
+        if developer_id and not developer:
+            flash("The selected developer is invalid.", "danger")
+            return _render_property_form("properties/create.html")
+        if agent_id and not agent:
+            flash("The selected agent is invalid.", "danger")
+            return _render_property_form("properties/create.html")
 
         property = Property(
             listing_number="TEMP",
+            seller_id=seller.id,
+            developer_id=developer.id if developer else None,
+            agent_id=agent.id if agent else None,
             title=request.form["title"],
             description=request.form["description"],
             property_type=request.form["property_type"],
@@ -221,7 +261,7 @@ def create():
 
         return redirect(url_for("properties.index"))
 
-    return render_template("properties/create.html")
+    return _render_property_form("properties/create.html")
 
 
 @properties.route("/<int:id>/edit", methods=["GET", "POST"])
@@ -231,6 +271,25 @@ def edit(id):
     property = Property.query.get_or_404(id)
 
     if request.method == "POST":
+        seller_id = request.form.get("seller_id", "").strip()
+        developer_id = request.form.get("developer_id", "").strip()
+        agent_id = request.form.get("agent_id", "").strip()
+        seller = Seller.query.get(int(seller_id)) if seller_id.isdigit() else None
+        developer = (
+            Developer.query.get(int(developer_id)) if developer_id.isdigit() else None
+        )
+        agent = Agent.query.get(int(agent_id)) if agent_id.isdigit() else None
+
+        if not seller:
+            flash("A seller is required.", "danger")
+            return _render_property_form("properties/edit.html", property)
+        if developer_id and not developer:
+            flash("The selected developer is invalid.", "danger")
+            return _render_property_form("properties/edit.html", property)
+        if agent_id and not agent:
+            flash("The selected agent is invalid.", "danger")
+            return _render_property_form("properties/edit.html", property)
+
         title = request.form.get("title", "").strip()
         property_type = request.form.get("property_type", "").strip()
         listing_type = request.form.get("listing_type", "").strip()
@@ -241,18 +300,21 @@ def edit(id):
                 "Title, property type, listing type, and price are required.",
                 "danger",
             )
-            return render_template("properties/edit.html", property=property)
+            return _render_property_form("properties/edit.html", property)
 
         try:
             price = float(price_value)
         except ValueError:
             flash("Price must be numeric.", "danger")
-            return render_template("properties/edit.html", property=property)
+            return _render_property_form("properties/edit.html", property)
 
         property.title = title
         property.description = request.form.get("description", "").strip()
         property.property_type = property_type
         property.listing_type = listing_type
+        property.seller_id = seller.id
+        property.developer_id = developer.id if developer else None
+        property.agent_id = agent.id if agent else None
         property.price = price
         property.currency = request.form.get("currency", "").strip() or None
         property.county = request.form.get("county", "").strip() or None
@@ -279,7 +341,7 @@ def edit(id):
                 "Bedrooms, bathrooms, and parking must be whole numbers. Floor area and land size must be numeric.",
                 "danger",
             )
-            return render_template("properties/edit.html", property=property)
+            return _render_property_form("properties/edit.html", property)
 
         property.status = request.form.get("status", "").strip() or None
         property.featured = request.form.get("featured") == "on"
@@ -290,7 +352,7 @@ def edit(id):
         flash("Property updated successfully.", "success")
         return redirect(url_for("properties.details", id=property.id))
 
-    return render_template("properties/edit.html", property=property)
+    return _render_property_form("properties/edit.html", property)
 
 
 @properties.route("/<int:id>/delete", methods=["GET", "POST"])

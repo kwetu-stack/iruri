@@ -43,6 +43,9 @@ Properties | IRURI™
                     <th>Type</th>
                     <th>Listing</th>
                     <th>County</th>
+                    <th>Seller</th>
+                    <th>Developer</th>
+                    <th>Agent</th>
                     <th class="text-end">Price</th>
                     <th>Status</th>
                     <th class="text-center">Actions</th>
@@ -66,6 +69,12 @@ Properties | IRURI™
                     <td>{{ property.listing_type }}</td>
 
                     <td>{{ property.county }}</td>
+
+                    <td>{{ property.seller.full_name or property.seller.company_name }}</td>
+
+                    <td>{{ property.developer.company_name if property.developer else "Not Assigned" }}</td>
+
+                    <td>{{ property.agent.full_name if property.agent else "Not Assigned" }}</td>
 
                     <td class="text-end">
                         KES {{ "{:,.0f}".format(property.price) }}
@@ -107,7 +116,7 @@ Properties | IRURI™
 
                 <tr>
 
-                    <td colspan="8" class="text-center py-5">
+                    <td colspan="11" class="text-center py-5">
 
                         <h5 class="mb-2">No Properties Found</h5>
 
