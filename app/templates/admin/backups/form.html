@@ -1,0 +1,53 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}Create Backup Record | IRURI{% endblock %}
+
+{% block dashboard_content %}
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <h2 class="mb-4">Create Backup Record</h2>
+        <form method="post">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label" for="backup_number">Backup Number</label>
+                    <input class="form-control" id="backup_number" name="backup_number" value="{{ values.backup_number }}" readonly>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="backup_name">Backup Name</label>
+                    <input class="form-control" id="backup_name" name="backup_name" value="{{ values.backup_name }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="backup_type">Backup Type</label>
+                    <select class="form-select" id="backup_type" name="backup_type" required>
+                        {% for backup_type in backup_types %}
+                        <option value="{{ backup_type }}" {% if values.backup_type == backup_type %}selected{% endif %}>{{ backup_type }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="status">Status</label>
+                    <select class="form-select" id="status" name="status" required>
+                        {% for backup_status in backup_statuses %}
+                        <option value="{{ backup_status }}" {% if values.status == backup_status %}selected{% endif %}>{{ backup_status }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="storage_location">Storage Location</label>
+                    <input class="form-control" id="storage_location" name="storage_location" value="{{ values.storage_location }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="file_size">File Size</label>
+                    <input class="form-control" id="file_size" name="file_size" value="{{ values.file_size }}">
+                </div>
+                <div class="col-12">
+                    <label class="form-label" for="notes">Notes</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="4">{{ values.notes }}</textarea>
+                </div>
+            </div>
+            <button class="btn btn-primary mt-4" type="submit">Create Record</button>
+            <a class="btn btn-outline-secondary mt-4" href="{{ url_for('admin.backups_index') }}">Cancel</a>
+        </form>
+    </div>
+</div>
+{% endblock %}

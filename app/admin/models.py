@@ -3,6 +3,36 @@ from datetime import datetime
 from app.extensions import db
 
 
+class SystemBackup(db.Model):
+    __tablename__ = "system_backups"
+    __table_args__ = (
+        db.CheckConstraint(
+            "backup_type IN ('Manual', 'Scheduled', 'Before Upgrade', 'Before Restore')",
+            name="ck_system_backups_backup_type",
+        ),
+        db.CheckConstraint(
+            "status IN ('Pending', 'Running', 'Completed', 'Failed')",
+            name="ck_system_backups_status",
+        ),
+    )
+
+    id = db.Column(db.Integer, primary_key=True)
+    backup_number = db.Column(db.String(30), unique=True, nullable=False, index=True)
+    backup_name = db.Column(db.String(200), nullable=False)
+    backup_type = db.Column(db.String(30), nullable=False)
+    storage_location = db.Column(db.String(255), nullable=True)
+    file_size = db.Column(db.String(50), nullable=True)
+    status = db.Column(db.String(30), nullable=False, default="Completed")
+    created_by = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True)
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    creator = db.relationship("User", backref="system_backups")
+
+
 class SystemSetting(db.Model):
     __tablename__ = "system_settings"
     __table_args__ = (

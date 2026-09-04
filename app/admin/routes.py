@@ -1,11 +1,12 @@
 from functools import wraps
+from datetime import datetime
 
 from flask import abort, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
 from app.admin import admin
 from app.admin.email_templates import EMAIL_TEMPLATE_CATEGORIES, EmailTemplate
-from app.admin.models import SystemSetting
+from app.admin.models import SystemBackup, SystemSetting
 from app.admin.roles import PERMISSION_GROUPS, Permission, Role
 from app.extensions import db
 from app.audit.service import record_audit
@@ -24,6 +25,9 @@ CATEGORIES = (
     "Email",
     "Appearance",
 )
+
+BACKUP_TYPES = ("Manual", "Scheduled", "Before Upgrade", "Before Restore")
+BACKUP_STATUSES = ("Pending", "Running", "Completed", "Failed")
 
 
 def admin_required(view):
@@ -177,6 +181,160 @@ def permissions_index():
     return render_template(
         "admin/roles/permissions.html", grouped_permissions=grouped_permissions
     )
+
+
+def _next_backup_number():
+    year = datetime.utcnow().year
+    prefix = f"BKP-{year}-"
+    latest = (
+        SystemBackup.query.filter(SystemBackup.backup_number.like(f"{prefix}%"))
+        .order_by(SystemBackup.backup_number.desc())
+        .first()
+    )
+    next_sequence = 1
+    if latest:
+        try:
+            next_sequence = int(latest.backup_number.rsplit("-", 1)[1]) + 1
+        except (IndexError, ValueError):
+            next_sequence = SystemBackup.query.filter(
+                SystemBackup.backup_number.like(f"{prefix}%")
+            ).count() + 1
+    return f"{prefix}{next_sequence:06d}"
+
+
+@admin.route("/backups")
+@admin.route("/backups/", strict_slashes=False)
+@require_permission("backup.manage")
+def backups_index():
+    backup_type = request.args.get("backup_type", "").strip()
+    status = request.args.get("status", "").strip()
+    search = request.args.get("search", "").strip()
+    date_from = request.args.get("date_from", "").strip()
+    date_to = request.args.get("date_to", "").strip()
+    query = SystemBackup.query
+
+    if backup_type in BACKUP_TYPES:
+        query = query.filter_by(backup_type=backup_type)
+    if status in BACKUP_STATUSES:
+        query = query.filter_by(status=status)
+    if search:
+        query = query.filter(
+            db.or_(
+                SystemBackup.backup_number.ilike(f"%{search}%"),
+                SystemBackup.backup_name.ilike(f"%{search}%"),
+            )
+        )
+    for field, operator in ((date_from, ">="), (date_to, "<=")):
+        if field:
+            try:
+                parsed = datetime.strptime(field, "%Y-%m-%d")
+            except ValueError:
+                flash("Use YYYY-MM-DD for backup date filters.", "danger")
+                continue
+            if operator == ">=":
+                query = query.filter(SystemBackup.created_at >= parsed)
+            else:
+                parsed = parsed.replace(hour=23, minute=59, second=59)
+                query = query.filter(SystemBackup.created_at <= parsed)
+
+    backups = query.order_by(SystemBackup.created_at.desc(), SystemBackup.id.desc()).all()
+    stats = {
+        "total": SystemBackup.query.count(),
+        "successful": SystemBackup.query.filter_by(status="Completed").count(),
+        "failed": SystemBackup.query.filter_by(status="Failed").count(),
+        "latest": SystemBackup.query.order_by(SystemBackup.created_at.desc()).first(),
+    }
+    return render_template(
+        "admin/backups/index.html",
+        backups=backups,
+        backup_types=BACKUP_TYPES,
+        backup_statuses=BACKUP_STATUSES,
+        selected_type=backup_type,
+        selected_status=status,
+        search=search,
+        date_from=date_from,
+        date_to=date_to,
+        stats=stats,
+    )
+
+
+@admin.route("/backups/new", methods=["GET", "POST"])
+@require_permission("backup.manage")
+def backup_create():
+    values = {
+        "backup_number": _next_backup_number(),
+        "backup_name": request.form.get("backup_name", "").strip(),
+        "backup_type": request.form.get("backup_type", "Manual").strip(),
+        "storage_location": request.form.get("storage_location", "").strip(),
+        "file_size": request.form.get("file_size", "").strip(),
+        "status": request.form.get("status", "Completed").strip(),
+        "notes": request.form.get("notes", "").strip(),
+    }
+    if request.method == "POST":
+        errors = []
+        if not values["backup_name"]:
+            errors.append("Backup name is required.")
+        if values["backup_type"] not in BACKUP_TYPES:
+            errors.append("Choose a valid backup type.")
+        if values["status"] not in BACKUP_STATUSES:
+            errors.append("Choose a valid backup status.")
+        if SystemBackup.query.filter_by(backup_number=values["backup_number"]).first():
+            errors.append("A backup with that number already exists.")
+        if errors:
+            for error in errors:
+                flash(error, "danger")
+        else:
+            backup = SystemBackup(
+                backup_number=values["backup_number"],
+                backup_name=values["backup_name"],
+                backup_type=values["backup_type"],
+                storage_location=values["storage_location"] or None,
+                file_size=values["file_size"] or None,
+                status=values["status"],
+                created_by=current_user.id,
+                notes=values["notes"] or None,
+            )
+            db.session.add(backup)
+            db.session.commit()
+            record_audit(
+                "Create",
+                "Administration",
+                f"Backup record {backup.backup_number} created",
+                "System Backup",
+                backup.id,
+            )
+            flash("Backup record created.", "success")
+            return redirect(url_for("admin.backup_detail", backup_id=backup.id))
+    return render_template(
+        "admin/backups/form.html",
+        values=values,
+        backup_types=BACKUP_TYPES,
+        backup_statuses=BACKUP_STATUSES,
+    )
+
+
+@admin.route("/backups/<int:backup_id>")
+@require_permission("backup.manage")
+def backup_detail(backup_id):
+    backup = SystemBackup.query.get_or_404(backup_id)
+    return render_template("admin/backups/detail.html", backup=backup)
+
+
+@admin.route("/backups/<int:backup_id>/notes", methods=["POST"])
+@require_permission("backup.manage")
+def backup_notes(backup_id):
+    backup = SystemBackup.query.get_or_404(backup_id)
+    backup.notes = request.form.get("notes", "").strip() or None
+    db.session.commit()
+    record_audit(
+        "Update",
+        "Administration",
+        f"Notes updated for backup {backup.backup_number}",
+        "System Backup",
+        backup.id,
+    )
+    flash("Backup notes updated.", "success")
+    return redirect(url_for("admin.backup_detail", backup_id=backup.id))
 
 
 @admin.route("/settings")

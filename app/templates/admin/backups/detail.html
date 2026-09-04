@@ -1,0 +1,38 @@
+{% extends "layouts/dashboard.html" %}
+
+{% block title %}{{ backup.backup_number }} | IRURI{% endblock %}
+
+{% block dashboard_content %}
+<div class="card shadow-sm border-0 mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <p class="text-muted mb-1">{{ backup.backup_type }}</p>
+                <h2>{{ backup.backup_number }}</h2>
+            </div>
+            <a class="btn btn-outline-secondary" href="{{ url_for('admin.backups_index') }}">Back to backups</a>
+        </div>
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Backup Number</dt><dd class="col-sm-9">{{ backup.backup_number }}</dd>
+            <dt class="col-sm-3">Backup Name</dt><dd class="col-sm-9">{{ backup.backup_name }}</dd>
+            <dt class="col-sm-3">Backup Type</dt><dd class="col-sm-9">{{ backup.backup_type }}</dd>
+            <dt class="col-sm-3">Storage Location</dt><dd class="col-sm-9">{{ backup.storage_location or '-' }}</dd>
+            <dt class="col-sm-3">File Size</dt><dd class="col-sm-9">{{ backup.file_size or '-' }}</dd>
+            <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ backup.status }}</dd>
+            <dt class="col-sm-3">Created By</dt><dd class="col-sm-9">{{ backup.creator.email if backup.creator else '-' }}</dd>
+            <dt class="col-sm-3">Notes</dt><dd class="col-sm-9">{{ backup.notes or '-' }}</dd>
+            <dt class="col-sm-3">Date Created</dt><dd class="col-sm-9">{{ backup.created_at.strftime('%Y-%m-%d %H:%M') }}</dd>
+        </dl>
+    </div>
+</div>
+
+<div class="card shadow-sm border-0">
+    <div class="card-body">
+        <h3 class="h5">Add Notes</h3>
+        <form method="post" action="{{ url_for('admin.backup_notes', backup_id=backup.id) }}">
+            <textarea class="form-control" name="notes" rows="4">{{ backup.notes or '' }}</textarea>
+            <button class="btn btn-primary mt-3" type="submit">Save Notes</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
