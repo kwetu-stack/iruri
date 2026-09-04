@@ -1,112 +1,107 @@
-<div class="iruri-sidebar">
+<div id="iruriSidebar" class="iruri-sidebar collapse d-md-block">
+
+    {% set current_endpoint = request.endpoint or '' %}
+    {% set has_reports_access = current_user.is_authenticated and (
+        current_user.has_permission('reports.executive') or
+        current_user.has_permission('reports.marketplace') or
+        current_user.has_permission('reports.transactions') or
+        current_user.has_permission('reports.financial') or
+        current_user.has_permission('reports.administration') or
+        current_user.has_permission('reports.export')
+    ) %}
+    {% set can_manage_admin = current_user.is_authenticated and current_user.has_permission('settings.manage') %}
 
     <ul class="nav flex-column">
 
         <li class="nav-item">
-    <a class="nav-link"
-       href="{{ url_for('dashboard.index') }}">
-        🏠 Dashboard
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link"
-       href="{{ url_for('properties.index') }}">
-        🏡 Properties
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link"
-       href="{{ url_for('notifications.index') }}">
-        Notifications{% if notification_unread_count %} ({{ notification_unread_count }}){% endif %}
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link" href="{{ url_for('activities.index') }}">
-        Activity Logs
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link"
-       href="{{ url_for('properties.amenities_index') }}">
-        🏡 Amenities
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link"
-       href="{{ url_for('properties.features_index') }}">
-        🏠 Property Features
-    </a>
-</li>
-
-<li class="nav-item">
-    <a class="nav-link"
-       href="{{ url_for('agents.index') }}">
-        👤 Agents
-    </a>
-</li>
+            <a class="nav-link{% if current_endpoint == 'dashboard.index' %} active{% endif %}"
+               href="{{ url_for('dashboard.index') }}"{% if current_endpoint == 'dashboard.index' %} aria-current="page"{% endif %}>
+                🏠 Dashboard
+            </a>
+        </li>
 
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('buyers.index') }}">
+            <a class="nav-link{% if current_endpoint == 'properties.index' %} active{% endif %}"
+               href="{{ url_for('properties.index') }}"{% if current_endpoint == 'properties.index' %} aria-current="page"{% endif %}>
+                🏡 Properties
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link{% if current_endpoint.startswith('notifications.') %} active{% endif %}"
+               href="{{ url_for('notifications.index') }}"{% if current_endpoint.startswith('notifications.') %} aria-current="page"{% endif %}>
+                Notifications{% if notification_unread_count %} ({{ notification_unread_count }}){% endif %}
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link{% if current_endpoint.startswith('activities.') %} active{% endif %}" href="{{ url_for('activities.index') }}"{% if current_endpoint.startswith('activities.') %} aria-current="page"{% endif %}>
+                Activity Logs
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link{% if current_endpoint == 'properties.amenities_index' %} active{% endif %}"
+               href="{{ url_for('properties.amenities_index') }}"{% if current_endpoint == 'properties.amenities_index' %} aria-current="page"{% endif %}>
+                🏡 Amenities
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link{% if current_endpoint == 'properties.features_index' %} active{% endif %}"
+               href="{{ url_for('properties.features_index') }}"{% if current_endpoint == 'properties.features_index' %} aria-current="page"{% endif %}>
+                🏠 Property Features
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link{% if current_endpoint.startswith('agents.') %} active{% endif %}"
+               href="{{ url_for('agents.index') }}"{% if current_endpoint.startswith('agents.') %} aria-current="page"{% endif %}>
+                👤 Agents
+            </a>
+        </li>
+
+        <li class="nav-item">
+            <a class="nav-link{% if current_endpoint.startswith('buyers.') %} active{% endif %}" href="{{ url_for('buyers.index') }}"{% if current_endpoint.startswith('buyers.') %} aria-current="page"{% endif %}>
                 🛒 Buyers
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('sellers.index') }}">
+            <a class="nav-link{% if current_endpoint.startswith('sellers.') %} active{% endif %}" href="{{ url_for('sellers.index') }}"{% if current_endpoint.startswith('sellers.') %} aria-current="page"{% endif %}>
                 👤 Sellers
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('agencies.index') }}">
+            <a class="nav-link{% if current_endpoint.startswith('agencies.') %} active{% endif %}" href="{{ url_for('agencies.index') }}"{% if current_endpoint.startswith('agencies.') %} aria-current="page"{% endif %}>
                 🏢 Agencies
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('commissions.index') }}">
+            <a class="nav-link{% if current_endpoint.startswith('commissions.') %} active{% endif %}" href="{{ url_for('commissions.index') }}"{% if current_endpoint.startswith('commissions.') %} aria-current="page"{% endif %}>
                 💰 Commissions
             </a>
         </li>
 
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('developers.index') }}">
+            <a class="nav-link{% if current_endpoint.startswith('developers.') %} active{% endif %}" href="{{ url_for('developers.index') }}"{% if current_endpoint.startswith('developers.') %} aria-current="page"{% endif %}>
                 🏗 Developers
             </a>
         </li>
 
+        {% if has_reports_access %}
         <li class="nav-item">
-            <a class="nav-link" href="#">
-                👷 Professionals
-            </a>
-        </li>
-
-        <li class="nav-item">
-            <a class="nav-link" href="#">
-                🌍 Marketplace
-            </a>
-        </li>
-
-        <li class="nav-item">
-            <a class="nav-link" href="#">
-                💬 Messaging
-            </a>
-        </li>
-
-        <li class="nav-item">
-            <a class="nav-link" href="#">
+            <a class="nav-link{% if current_endpoint.startswith('reports.') %} active{% endif %}" href="{{ url_for('reports.analytics_dashboard') }}"{% if current_endpoint.startswith('reports.') %} aria-current="page"{% endif %}>
                 📊 Reports
             </a>
         </li>
+        {% endif %}
 
         {% if current_user.is_authenticated and current_user.has_permission("reports.executive") %}
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('reports.executive_dashboard') }}">
+            <a class="nav-link{% if current_endpoint == 'reports.executive_dashboard' %} active{% endif %}" href="{{ url_for('reports.executive_dashboard') }}"{% if current_endpoint == 'reports.executive_dashboard' %} aria-current="page"{% endif %}>
                 Executive Reports
             </a>
         </li>
@@ -114,7 +109,7 @@
 
         {% if current_user.is_authenticated and current_user.has_permission("reports.transactions") %}
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('reports.transactions_dashboard') }}">
+            <a class="nav-link{% if current_endpoint == 'reports.transactions_dashboard' %} active{% endif %}" href="{{ url_for('reports.transactions_dashboard') }}"{% if current_endpoint == 'reports.transactions_dashboard' %} aria-current="page"{% endif %}>
                 Transaction Reports
             </a>
         </li>
@@ -122,7 +117,7 @@
 
         {% if current_user.is_authenticated and current_user.has_permission("reports.financial") %}
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('reports.financial_dashboard') }}">
+            <a class="nav-link{% if current_endpoint == 'reports.financial_dashboard' %} active{% endif %}" href="{{ url_for('reports.financial_dashboard') }}"{% if current_endpoint == 'reports.financial_dashboard' %} aria-current="page"{% endif %}>
                 Financial Reports
             </a>
         </li>
@@ -130,29 +125,33 @@
 
         {% if current_user.is_authenticated and current_user.has_permission("reports.administration") %}
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('reports.administration_dashboard') }}">
+            <a class="nav-link{% if current_endpoint == 'reports.administration_dashboard' %} active{% endif %}" href="{{ url_for('reports.administration_dashboard') }}"{% if current_endpoint == 'reports.administration_dashboard' %} aria-current="page"{% endif %}>
                 Administration Reports
             </a>
         </li>
         {% endif %}
 
         {% if current_user.is_authenticated and current_user.has_permission("reports.export") %}
-        <li class="nav-item"><a class="nav-link" href="{{ url_for('reports.analytics_dashboard') }}">Reports Analytics</a></li>
+        <li class="nav-item">
+            <a class="nav-link{% if current_endpoint == 'reports.analytics_dashboard' %} active{% endif %}" href="{{ url_for('reports.analytics_dashboard') }}"{% if current_endpoint == 'reports.analytics_dashboard' %} aria-current="page"{% endif %}>
+                Reports Analytics
+            </a>
+        </li>
         {% endif %}
 
-        {% if current_user.role|lower in ["admin", "administrator"] %}
+        {% if can_manage_admin %}
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('admin.settings_index') }}">
+            <a class="nav-link{% if current_endpoint.startswith('admin.') %} active{% endif %}" href="{{ url_for('admin.settings_index') }}"{% if current_endpoint.startswith('admin.') %} aria-current="page"{% endif %}>
                 Administration
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('admin.email_templates_index') }}">
+            <a class="nav-link{% if current_endpoint == 'admin.email_templates_index' or current_endpoint.startswith('admin.email_template_') %} active{% endif %}" href="{{ url_for('admin.email_templates_index') }}"{% if current_endpoint == 'admin.email_templates_index' or current_endpoint.startswith('admin.email_template_') %} aria-current="page"{% endif %}>
                 Email Templates
             </a>
         </li>
         <li class="nav-item">
-            <a class="nav-link" href="{{ url_for('admin.backups_index') }}">
+            <a class="nav-link{% if current_endpoint.startswith('admin.backup') or current_endpoint == 'admin.settings_index' %} active{% endif %}" href="{{ url_for('admin.backups_index') }}"{% if current_endpoint.startswith('admin.backup') or current_endpoint == 'admin.settings_index' %} aria-current="page"{% endif %}>
                 Backup & Restore
             </a>
         </li>

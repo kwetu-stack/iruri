@@ -99,6 +99,78 @@ a:hover{
 
 }
 
+.iruri-sidebar {
+
+    background: rgba(255,255,255,.45);
+    border-right: 1px solid var(--iruri-border);
+    min-height: calc(100vh - 72px);
+    padding: 1rem .75rem;
+
+}
+
+.iruri-sidebar .nav-link{
+
+    color: var(--iruri-text);
+    border-radius: 10px;
+    padding: .65rem .9rem;
+    margin: .15rem 0;
+    transition: all .2s ease;
+    white-space: nowrap;
+
+}
+
+.iruri-sidebar .nav-link:hover,
+.iruri-sidebar .nav-link.active{
+
+    background: rgba(74, 44, 23, 0.08);
+    color: var(--iruri-primary);
+    font-weight: 600;
+
+}
+
+.iruri-main-panel {
+
+    min-width: 0;
+
+}
+
+.table-responsive {
+
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+
+}
+
+.img-fluid,
+img,
+canvas,
+svg,
+video {
+
+    max-width: 100%;
+    height: auto;
+
+}
+
+@media (max-width: 767.98px) {
+
+    .iruri-sidebar {
+        min-height: auto;
+        border-right: none;
+        border-bottom: 1px solid var(--iruri-border);
+        padding: .75rem;
+    }
+
+    .navbar-brand img {
+        height: 32px;
+    }
+
+    .iruri-main-panel {
+        padding-top: 1rem !important;
+    }
+
+}
+
 
 /* ==========================
    CARDS
