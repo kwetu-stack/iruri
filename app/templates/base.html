@@ -25,35 +25,33 @@
 
 <body class="bg-light">
 
-<nav class="navbar navbar-dark bg-dark">
+{% block header %}
+<nav class="navbar navbar-dark iruri-navbar shadow-sm">
 
     <div class="container">
 
-        <span class="navbar-brand fw-bold">
-            IRURI™ Property Marketplace
-        </span>
+        <a class="navbar-brand fw-bold d-flex align-items-center" href="{{ url_for('dashboard.index') }}">
+
+            <img
+                src="{{ url_for('static', filename='img/iruri-logo.png') }}"
+                alt="IRURI"
+                class="iruri-header-logo me-2"
+            >
+
+            <span>IRURI™ Property Marketplace</span>
+
+        </a>
 
     </div>
 
 </nav>
+{% endblock %}
 
 <div class="container mt-4">
 
-    {% with messages = get_flashed_messages(with_categories=true) %}
-
-        {% if messages %}
-
-            {% for category, message in messages %}
-
-                <div class="alert alert-{{ category }}">
-                    {{ message }}
-                </div>
-
-            {% endfor %}
-
-        {% endif %}
-
-    {% endwith %}
+    {% block flash %}
+    {% include "partials/flash_messages.html" %}
+    {% endblock %}
 
     {% block content %}
     {% endblock %}

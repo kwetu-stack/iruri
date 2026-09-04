@@ -99,6 +99,20 @@ a:hover{
 
 }
 
+.iruri-navbar{
+
+    padding-top: .5rem;
+    padding-bottom: .5rem;
+
+}
+
+.iruri-header-logo{
+
+    height: 40px;
+    width: auto;
+
+}
+
 .iruri-sidebar {
 
     background: rgba(255,255,255,.45);
