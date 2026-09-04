@@ -23,6 +23,7 @@ from app.admin.roles import seed_default_roles_and_permissions
 from app.audit import audit
 from app.notifications import notifications
 from app.activities import activities
+from app.reports import reports
 from app.properties.models import Amenity
 
 import app.models
@@ -94,6 +95,7 @@ def create_app():
     app.register_blueprint(audit)
     app.register_blueprint(notifications)
     app.register_blueprint(activities)
+    app.register_blueprint(reports)
 
     with app.app_context():
         seed_default_amenities()

@@ -104,6 +104,14 @@
             </a>
         </li>
 
+        {% if current_user.is_authenticated and current_user.has_permission("reports.executive") %}
+        <li class="nav-item">
+            <a class="nav-link" href="{{ url_for('reports.executive_dashboard') }}">
+                Executive Reports
+            </a>
+        </li>
+        {% endif %}
+
         {% if current_user.role|lower in ["admin", "administrator"] %}
         <li class="nav-item">
             <a class="nav-link" href="{{ url_for('admin.settings_index') }}">
