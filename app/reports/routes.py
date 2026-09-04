@@ -791,3 +791,406 @@ def transactions_dashboard():
         summary=summary,
         chart_data=chart_data,
     )
+
+
+@reports.route("/financial")
+@reports.route("/financial/", strict_slashes=False)
+@require_permission("reports.financial")
+def financial_dashboard():
+    selected_period, start_date, end_date = _date_window()
+    page, per_page = _pagination_args()
+    property_type = request.args.get("property_type", "").strip()
+    status = request.args.get("status", "").strip()
+    payment_status = request.args.get("payment_status", "").strip()
+    payment_method = request.args.get("payment_method", "").strip()
+    agent_id = request.args.get("agent_id", "").strip()
+    search = request.args.get("q", "").strip()
+
+    def apply_filters(query, date_column):
+        query = _apply_date_window(query, date_column, start_date, end_date)
+        if property_type:
+            query = query.filter(Property.property_type == property_type)
+        if status in TRANSACTION_STATUSES:
+            query = query.filter(PropertyTransaction.transaction_status == status)
+        if agent_id.isdigit():
+            query = query.filter(Property.agent_id == int(agent_id))
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(
+                or_(
+                    PropertyTransaction.transaction_number.ilike(pattern),
+                    Property.listing_number.ilike(pattern),
+                    Property.title.ilike(pattern),
+                    Buyer.full_name.ilike(pattern),
+                    Buyer.company_name.ilike(pattern),
+                    Seller.full_name.ilike(pattern),
+                    Seller.company_name.ilike(pattern),
+                    Agent.first_name.ilike(pattern),
+                    Agent.last_name.ilike(pattern),
+                )
+            )
+        return query
+
+    transaction_query = (
+        PropertyTransaction.query.join(
+            Property, Property.id == PropertyTransaction.property_id
+        )
+        .outerjoin(Buyer, Buyer.id == PropertyTransaction.buyer_id)
+        .outerjoin(Seller, Seller.id == PropertyTransaction.seller_id)
+        .outerjoin(Agent, Agent.id == Property.agent_id)
+    )
+    transaction_query = apply_filters(
+        transaction_query, PropertyTransaction.completion_date
+    )
+    payment_totals = (
+        PropertyPayment.query.with_entities(
+            PropertyPayment.sale_agreement_id,
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            PropertyPayment.payment_type == "Refund",
+                            -PropertyPayment.amount,
+                        ),
+                        else_=PropertyPayment.amount,
+                    )
+                ),
+                0,
+            ).label("paid"),
+        )
+        .group_by(PropertyPayment.sale_agreement_id)
+        .subquery()
+    )
+    completed_transactions = transaction_query.filter(
+        PropertyTransaction.transaction_status == "Completed"
+    )
+    total_revenue = _money(
+        completed_transactions.with_entities(
+            func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0)
+        ).scalar()
+    )
+    average_sale_value = _money(
+        completed_transactions.with_entities(
+            func.coalesce(func.avg(PropertyTransaction.final_sale_price), 0)
+        ).scalar()
+    )
+    highest_sale = _money(
+        completed_transactions.with_entities(
+            func.coalesce(func.max(PropertyTransaction.final_sale_price), 0)
+        ).scalar()
+    )
+    lowest_sale = _money(
+        completed_transactions.with_entities(
+            func.coalesce(func.min(PropertyTransaction.final_sale_price), 0)
+        ).scalar()
+    )
+    month_start = date.today().replace(day=1)
+    year_start = date.today().replace(month=1, day=1)
+    revenue_this_month = _money(
+        completed_transactions.filter(
+            PropertyTransaction.completion_date >= month_start
+        )
+        .with_entities(func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0))
+        .scalar()
+    )
+    revenue_this_year = _money(
+        completed_transactions.filter(PropertyTransaction.completion_date >= year_start)
+        .with_entities(func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0))
+        .scalar()
+    )
+
+    payment_query = (
+        PropertyPayment.query.join(
+            SaleAgreement, SaleAgreement.id == PropertyPayment.sale_agreement_id
+        )
+        .outerjoin(
+            PropertyTransaction,
+            PropertyTransaction.sale_agreement_id == SaleAgreement.id,
+        )
+        .join(Property, Property.id == SaleAgreement.property_id)
+        .outerjoin(Buyer, Buyer.id == SaleAgreement.buyer_id)
+        .outerjoin(Seller, Seller.id == SaleAgreement.seller_id)
+        .outerjoin(Agent, Agent.id == Property.agent_id)
+    )
+    payment_query = apply_filters(payment_query, PropertyPayment.payment_date)
+    if payment_status in ("Received", "Refund"):
+        if payment_status == "Refund":
+            payment_query = payment_query.filter(
+                PropertyPayment.payment_type == "Refund"
+            )
+        else:
+            payment_query = payment_query.filter(
+                PropertyPayment.payment_type != "Refund"
+            )
+    if payment_method:
+        if payment_method == "Other":
+            payment_query = payment_query.filter(
+                PropertyPayment.payment_method.notin_(
+                    ("Cash", "Bank Transfer", "Mobile Money", "Cheque")
+                )
+            )
+        else:
+            payment_query = payment_query.filter(
+                PropertyPayment.payment_method == payment_method
+            )
+    total_payments_received = _money(
+        payment_query.filter(PropertyPayment.payment_type != "Refund")
+        .with_entities(func.coalesce(func.sum(PropertyPayment.amount), 0))
+        .scalar()
+    )
+    payments_this_month = _money(
+        payment_query.filter(
+            PropertyPayment.payment_type != "Refund",
+            PropertyPayment.payment_date >= month_start,
+        )
+        .with_entities(func.coalesce(func.sum(PropertyPayment.amount), 0))
+        .scalar()
+    )
+    payments_this_year = _money(
+        payment_query.filter(
+            PropertyPayment.payment_type != "Refund",
+            PropertyPayment.payment_date >= year_start,
+        )
+        .with_entities(func.coalesce(func.sum(PropertyPayment.amount), 0))
+        .scalar()
+    )
+    payments = (
+        payment_query.options(
+            joinedload(PropertyPayment.sale_agreement).joinedload(
+                SaleAgreement.transactions
+            ),
+            joinedload(PropertyPayment.sale_agreement).joinedload(SaleAgreement.buyer),
+        )
+        .order_by(PropertyPayment.payment_date.desc(), PropertyPayment.id.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    outstanding_query = (
+        SaleAgreement.query.join(Property, Property.id == SaleAgreement.property_id)
+        .outerjoin(
+            PropertyTransaction,
+            PropertyTransaction.sale_agreement_id == SaleAgreement.id,
+        )
+        .outerjoin(Buyer, Buyer.id == SaleAgreement.buyer_id)
+        .outerjoin(Seller, Seller.id == SaleAgreement.seller_id)
+        .outerjoin(Agent, Agent.id == Property.agent_id)
+        .outerjoin(
+            payment_totals, payment_totals.c.sale_agreement_id == SaleAgreement.id
+        )
+    )
+    outstanding_query = apply_filters(outstanding_query, SaleAgreement.completion_date)
+    outstanding_query = outstanding_query.filter(
+        SaleAgreement.agreed_price > func.coalesce(payment_totals.c.paid, 0)
+    )
+    outstanding = (
+        outstanding_query.options(
+            joinedload(SaleAgreement.payments),
+            joinedload(SaleAgreement.property),
+            joinedload(SaleAgreement.buyer),
+        )
+        .order_by(SaleAgreement.completion_date)
+        .all()
+    )
+    outstanding_balance = _money(
+        outstanding_query.with_entities(
+            func.coalesce(
+                func.sum(
+                    SaleAgreement.agreed_price - func.coalesce(payment_totals.c.paid, 0)
+                ),
+                0,
+            )
+        ).scalar()
+    )
+    pending_payments = len(outstanding)
+
+    commission_query = (
+        PropertyCommission.query.join(Agent, Agent.id == PropertyCommission.agent_id)
+        .join(Property, Property.id == PropertyCommission.property_id)
+        .outerjoin(
+            PropertyTransaction,
+            PropertyTransaction.property_id == PropertyCommission.property_id,
+        )
+        .outerjoin(Buyer, Buyer.id == PropertyTransaction.buyer_id)
+        .outerjoin(Seller, Seller.id == PropertyCommission.seller_id)
+    )
+    commission_query = apply_filters(
+        commission_query, PropertyTransaction.completion_date
+    )
+    commission_rows = (
+        commission_query.with_entities(
+            Agent.first_name,
+            Agent.last_name,
+            func.count(func.distinct(PropertyTransaction.id)).label(
+                "transactions_closed"
+            ),
+            func.coalesce(func.sum(PropertyCommission.commission_amount), 0).label(
+                "earned"
+            ),
+            func.coalesce(func.sum(PropertyCommission.amount_paid), 0).label("paid"),
+            func.coalesce(func.sum(PropertyCommission.balance), 0).label("outstanding"),
+        )
+        .group_by(Agent.id, Agent.first_name, Agent.last_name)
+        .order_by(func.sum(PropertyCommission.commission_amount).desc())
+        .all()
+    )
+    total_commission_paid = _money(
+        commission_query.with_entities(
+            func.coalesce(func.sum(PropertyCommission.amount_paid), 0)
+        ).scalar()
+    )
+    commission_outstanding = _money(
+        commission_query.with_entities(
+            func.coalesce(func.sum(PropertyCommission.balance), 0)
+        ).scalar()
+    )
+
+    grouping = request.args.get("grouping", "monthly").strip()
+    if grouping not in ("monthly", "quarterly", "yearly"):
+        grouping = "monthly"
+    period_expression = case(
+        (
+            grouping == "yearly",
+            func.strftime("%Y", PropertyTransaction.completion_date),
+        ),
+        (
+            grouping == "quarterly",
+            func.printf(
+                "%s Q%d",
+                func.strftime("%Y", PropertyTransaction.completion_date),
+                (
+                    (
+                        func.cast(
+                            func.strftime("%m", PropertyTransaction.completion_date),
+                            db.Integer,
+                        )
+                        - 1
+                    )
+                    / 3
+                )
+                + 1,
+            ),
+        ),
+        else_=func.strftime("%Y-%m", PropertyTransaction.completion_date),
+    ).label("period")
+    revenue_summary = dict(
+        completed_transactions.with_entities(
+            period_expression,
+            func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0),
+        )
+        .group_by(period_expression)
+        .order_by(period_expression)
+        .all()
+    )
+    payment_summary = dict(
+        payment_query.filter(PropertyPayment.payment_type != "Refund")
+        .with_entities(
+            func.strftime("%Y-%m", PropertyPayment.payment_date),
+            func.coalesce(func.sum(PropertyPayment.amount), 0),
+        )
+        .group_by(func.strftime("%Y-%m", PropertyPayment.payment_date))
+        .all()
+    )
+    periods = list(revenue_summary)
+    chart_data = {
+        "revenue": {
+            "labels": periods,
+            "values": [float(revenue_summary[period]) for period in periods],
+        },
+        "payments": {
+            "labels": periods,
+            "values": [float(payment_summary.get(period, 0)) for period in periods],
+        },
+        "outstanding": {
+            "labels": periods,
+            "values": [float(outstanding_balance) for period in periods],
+        },
+        "payment_methods": {
+            "labels": ["Cash", "Bank Transfer", "Mobile Money", "Cheque", "Other"],
+            "values": [],
+        },
+        "agents": {
+            "labels": [
+                f"{row.first_name} {row.last_name}" for row in commission_rows[:10]
+            ],
+            "values": [float(row.earned) for row in commission_rows[:10]],
+        },
+    }
+    method_rows = (
+        payment_query.filter(PropertyPayment.payment_type != "Refund")
+        .with_entities(
+            case(
+                (
+                    PropertyPayment.payment_method.in_(
+                        ("Cash", "Bank Transfer", "Mobile Money", "Cheque")
+                    ),
+                    PropertyPayment.payment_method,
+                ),
+                else_="Other",
+            ).label("method"),
+            func.coalesce(func.sum(PropertyPayment.amount), 0),
+        )
+        .group_by("method")
+        .all()
+    )
+    method_values = dict(method_rows)
+    chart_data["payment_methods"]["values"] = [
+        float(method_values.get(label, 0))
+        for label in chart_data["payment_methods"]["labels"]
+    ]
+    summary_rows = [
+        {
+            "period": period,
+            "revenue": revenue_summary[period],
+            "payments": payment_summary.get(period, 0),
+            "outstanding": outstanding_balance,
+            "commissions": total_commission_paid,
+        }
+        for period in periods
+    ]
+    filter_params = {key: value for key, value in request.args.items() if key != "page"}
+    return render_template(
+        "reports/financial.html",
+        selected_period=selected_period,
+        date_from=start_date.isoformat() if start_date else "",
+        date_to=end_date.isoformat() if end_date else "",
+        filters=request.args,
+        filter_params=filter_params,
+        property_types=PROPERTY_TYPE_LABELS,
+        statuses=TRANSACTION_STATUSES,
+        payment_statuses=("Received", "Refund"),
+        payment_methods=("Cash", "Bank Transfer", "Mobile Money", "Cheque", "Other"),
+        sellers=Seller.query.order_by(Seller.full_name, Seller.company_name).all(),
+        agents=Agent.query.order_by(Agent.first_name, Agent.last_name).all(),
+        transactions=transaction_query.options(
+            joinedload(PropertyTransaction.property),
+            joinedload(PropertyTransaction.buyer),
+            joinedload(PropertyTransaction.seller),
+            joinedload(PropertyTransaction.sale_agreement).joinedload(
+                SaleAgreement.payments
+            ),
+        )
+        .order_by(PropertyTransaction.completion_date.desc())
+        .paginate(page=page, per_page=per_page, error_out=False),
+        payments=payments,
+        outstanding=outstanding,
+        commission_rows=commission_rows,
+        summary_rows=summary_rows,
+        today=date.today(),
+        summary={
+            "total_revenue": total_revenue,
+            "revenue_this_month": revenue_this_month,
+            "revenue_this_year": revenue_this_year,
+            "total_payments_received": total_payments_received,
+            "payments_this_month": payments_this_month,
+            "payments_this_year": payments_this_year,
+            "pending_payments": pending_payments,
+            "outstanding_balance": outstanding_balance,
+            "total_commission_paid": total_commission_paid,
+            "commission_outstanding": commission_outstanding,
+            "average_sale_value": average_sale_value,
+            "highest_sale": highest_sale,
+            "lowest_sale": lowest_sale,
+        },
+        chart_data=chart_data,
+        grouping=grouping,
+    )

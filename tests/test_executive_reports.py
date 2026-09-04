@@ -62,6 +62,34 @@ class ExecutiveReportsTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn(b"Marketplace Reports Dashboard", response.data)
 
+    def test_financial_reports_route_is_registered(self):
+        self.assertIn("reports.financial_dashboard", self.app.view_functions)
+
+    def test_financial_reports_requires_permission(self):
+        response = self.client.get("/reports/financial")
+        self.assertEqual(response.status_code, 403)
+
+    def test_financial_reports_renders_with_filters_and_charts(self):
+        self.app.view_functions["reports.financial_dashboard"] = (
+            self.app.view_functions["reports.financial_dashboard"].__wrapped__
+        )
+        response = self.client.get(
+            "/reports/financial?period=custom&date_from=2020-01-01&date_to=2020-01-31"
+            "&status=Completed&payment_status=Received&payment_method=Cash"
+            "&agent_id=1&property_type=House&q=TX"
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(b"Financial Reports", response.data)
+        self.assertIn(b'name="payment_status"', response.data)
+        for chart_id in (
+            b"monthlyRevenueChart",
+            b"paymentMethodsChart",
+            b"monthlyPaymentsChart",
+            b"outstandingBalanceChart",
+            b"agentCommissionChart",
+        ):
+            self.assertIn(chart_id, response.data)
+
 
 if __name__ == "__main__":
     unittest.main()

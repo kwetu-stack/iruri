@@ -113,7 +113,12 @@ PERMISSION_GROUPS = {
         "sale_agreement.delete",
     ),
     "Dashboard": ("dashboard.view",),
-    "Reports": ("reports.executive", "reports.marketplace", "reports.transactions"),
+    "Reports": (
+        "reports.executive",
+        "reports.marketplace",
+        "reports.transactions",
+        "reports.financial",
+    ),
 }
 
 
