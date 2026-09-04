@@ -15,10 +15,9 @@ from app.reports import reports
 from app.reservations.models import PropertyReservation
 from app.sale_agreements.models import PropertyPayment, SaleAgreement
 from app.sellers.models import Seller
-from app.transactions.models import PropertyTransaction
+from app.transactions.models import TRANSACTION_STATUSES, PropertyTransaction
 from app.utils.permissions import require_permission
 from app.viewings.models import ViewingRequest
-
 
 FILTER_OPTIONS = ("today", "week", "month", "year", "custom")
 PROPERTY_TYPE_LABELS = ("Apartment", "House", "Villa", "Land", "Commercial", "Other")
@@ -45,8 +44,12 @@ def _date_window():
         start_raw = request.args.get("date_from", "").strip()
         end_raw = request.args.get("date_to", "").strip()
         try:
-            start_date = datetime.strptime(start_raw, "%Y-%m-%d").date() if start_raw else None
-            end_date = datetime.strptime(end_raw, "%Y-%m-%d").date() if end_raw else today
+            start_date = (
+                datetime.strptime(start_raw, "%Y-%m-%d").date() if start_raw else None
+            )
+            end_date = (
+                datetime.strptime(end_raw, "%Y-%m-%d").date() if end_raw else today
+            )
         except ValueError:
             selected = "month"
             start_date = today.replace(day=1)
@@ -143,7 +146,9 @@ def executive_dashboard():
     selected_period, start_date, end_date = _date_window()
     start_at, end_at = _datetime_bounds(start_date, end_date)
 
-    property_query = _apply_datetime_window(Property.query, Property.created_at, start_at, end_at)
+    property_query = _apply_datetime_window(
+        Property.query, Property.created_at, start_at, end_at
+    )
     reservation_query = _apply_datetime_window(
         PropertyReservation.query, PropertyReservation.created_at, start_at, end_at
     )
@@ -171,7 +176,10 @@ def executive_dashboard():
     property_type_counts = dict(
         property_query.with_entities(
             case(
-                (Property.property_type.in_(PROPERTY_TYPE_LABELS[:-1]), Property.property_type),
+                (
+                    Property.property_type.in_(PROPERTY_TYPE_LABELS[:-1]),
+                    Property.property_type,
+                ),
                 else_="Other",
             ).label("property_type"),
             func.count(Property.id),
@@ -191,7 +199,9 @@ def executive_dashboard():
         .order_by("year", "month")
         .all()
     )
-    month_labels = [_month_label(int(row[0]), int(row[1])) for row in monthly_sales_rows]
+    month_labels = [
+        _month_label(int(row[0]), int(row[1])) for row in monthly_sales_rows
+    ]
 
     total_revenue = _money(
         completed_transaction_query.with_entities(
@@ -205,17 +215,24 @@ def executive_dashboard():
     )
 
     top_agents = (
-        completed_transaction_query.join(Property, Property.id == PropertyTransaction.property_id)
+        completed_transaction_query.join(
+            Property, Property.id == PropertyTransaction.property_id
+        )
         .join(Agent, Agent.id == Property.agent_id)
         .with_entities(
             Agent.id,
             Agent.first_name,
             Agent.last_name,
             func.count(PropertyTransaction.id).label("completed_sales"),
-            func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0).label("revenue"),
+            func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0).label(
+                "revenue"
+            ),
         )
         .group_by(Agent.id, Agent.first_name, Agent.last_name)
-        .order_by(func.count(PropertyTransaction.id).desc(), func.sum(PropertyTransaction.final_sale_price).desc())
+        .order_by(
+            func.count(PropertyTransaction.id).desc(),
+            func.sum(PropertyTransaction.final_sale_price).desc(),
+        )
         .limit(10)
         .all()
     )
@@ -239,9 +256,13 @@ def executive_dashboard():
         .subquery()
     )
     pending_payments = (
-        _apply_datetime_window(SaleAgreement.query, SaleAgreement.created_at, start_at, end_at)
+        _apply_datetime_window(
+            SaleAgreement.query, SaleAgreement.created_at, start_at, end_at
+        )
         .outerjoin(paid_subquery, paid_subquery.c.sale_agreement_id == SaleAgreement.id)
-        .filter(func.coalesce(paid_subquery.c.paid_amount, 0) < SaleAgreement.agreed_price)
+        .filter(
+            func.coalesce(paid_subquery.c.paid_amount, 0) < SaleAgreement.agreed_price
+        )
         .count()
     )
 
@@ -250,10 +271,18 @@ def executive_dashboard():
         "available_properties": property_status_counts.get("Available", 0),
         "reserved_properties": property_status_counts.get("Reserved", 0),
         "sold_properties": property_status_counts.get("Sold", 0),
-        "total_buyers": _apply_datetime_window(Buyer.query, Buyer.created_at, start_at, end_at).count(),
-        "active_buyers": _apply_datetime_window(Buyer.query.filter_by(active=True), Buyer.created_at, start_at, end_at).count(),
-        "total_sellers": _apply_datetime_window(Seller.query, Seller.created_at, start_at, end_at).count(),
-        "total_agents": _apply_datetime_window(Agent.query, Agent.created_at, start_at, end_at).count(),
+        "total_buyers": _apply_datetime_window(
+            Buyer.query, Buyer.created_at, start_at, end_at
+        ).count(),
+        "active_buyers": _apply_datetime_window(
+            Buyer.query.filter_by(active=True), Buyer.created_at, start_at, end_at
+        ).count(),
+        "total_sellers": _apply_datetime_window(
+            Seller.query, Seller.created_at, start_at, end_at
+        ).count(),
+        "total_agents": _apply_datetime_window(
+            Agent.query, Agent.created_at, start_at, end_at
+        ).count(),
         "total_transactions": transaction_query.count(),
         "total_reservations": reservation_query.count(),
         "total_revenue": total_revenue,
@@ -267,7 +296,9 @@ def executive_dashboard():
         "pending_payments": pending_payments,
         "active_listings": Property.query.filter_by(status="Available").count(),
         "average_property_price": _money(
-            property_query.with_entities(func.coalesce(func.avg(Property.price), 0)).scalar()
+            property_query.with_entities(
+                func.coalesce(func.avg(Property.price), 0)
+            ).scalar()
         ),
     }
     chart_data = {
@@ -289,7 +320,9 @@ def executive_dashboard():
         },
         "property_types": {
             "labels": list(PROPERTY_TYPE_LABELS),
-            "values": [property_type_counts.get(label, 0) for label in PROPERTY_TYPE_LABELS],
+            "values": [
+                property_type_counts.get(label, 0) for label in PROPERTY_TYPE_LABELS
+            ],
         },
     }
 
@@ -360,14 +393,18 @@ def marketplace_dashboard():
             _seller_name().label("seller"),
             func.count(Property.id).label("listed"),
         )
-        .group_by(Seller.id, Seller.full_name, Seller.company_name, Seller.seller_number)
+        .group_by(
+            Seller.id, Seller.full_name, Seller.company_name, Seller.seller_number
+        )
         .subquery()
     )
     seller_sales = (
         completed_transactions.with_entities(
             Property.seller_id.label("seller_id"),
             func.count(PropertyTransaction.id).label("sold"),
-            func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0).label("revenue"),
+            func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0).label(
+                "revenue"
+            ),
         )
         .group_by(Property.seller_id)
         .subquery()
@@ -380,7 +417,9 @@ def marketplace_dashboard():
             func.coalesce(seller_sales.c.revenue, 0).label("revenue"),
         )
         .outerjoin(seller_sales, seller_sales.c.seller_id == seller_rows.c.id)
-        .order_by(func.coalesce(seller_sales.c.revenue, 0).desc(), seller_rows.c.listed.desc())
+        .order_by(
+            func.coalesce(seller_sales.c.revenue, 0).desc(), seller_rows.c.listed.desc()
+        )
         .limit(20)
         .all()
     )
@@ -388,7 +427,9 @@ def marketplace_dashboard():
     commission_rows = (
         db.session.query(
             PropertyCommission.agent_id,
-            func.coalesce(func.sum(PropertyCommission.commission_amount), 0).label("commission"),
+            func.coalesce(func.sum(PropertyCommission.commission_amount), 0).label(
+                "commission"
+            ),
         )
         .join(Property, Property.id == PropertyCommission.property_id)
         .outerjoin(Seller, Seller.id == Property.seller_id)
@@ -412,7 +453,9 @@ def marketplace_dashboard():
         completed_transactions.with_entities(
             Property.agent_id.label("agent_id"),
             func.count(PropertyTransaction.id).label("sales"),
-            func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0).label("revenue"),
+            func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0).label(
+                "revenue"
+            ),
         )
         .filter(Property.agent_id.isnot(None))
         .group_by(Property.agent_id)
@@ -429,7 +472,10 @@ def marketplace_dashboard():
         )
         .outerjoin(agent_sales, agent_sales.c.agent_id == agent_rows.c.id)
         .outerjoin(commission_rows, commission_rows.c.agent_id == agent_rows.c.id)
-        .order_by(func.coalesce(agent_sales.c.sales, 0).desc(), func.coalesce(agent_sales.c.revenue, 0).desc())
+        .order_by(
+            func.coalesce(agent_sales.c.sales, 0).desc(),
+            func.coalesce(agent_sales.c.revenue, 0).desc(),
+        )
         .limit(20)
         .all()
     )
@@ -448,7 +494,10 @@ def marketplace_dashboard():
         .outerjoin(PropertyOffer, PropertyOffer.buyer_id == Buyer.id)
         .outerjoin(PropertyReservation, PropertyReservation.buyer_id == Buyer.id)
         .group_by(Buyer.id, Buyer.full_name, Buyer.company_name, Buyer.buyer_number)
-        .order_by(func.count(func.distinct(PropertyOffer.id)).desc(), func.count(func.distinct(ViewingRequest.id)).desc())
+        .order_by(
+            func.count(func.distinct(PropertyOffer.id)).desc(),
+            func.count(func.distinct(ViewingRequest.id)).desc(),
+        )
         .limit(20)
         .all()
     )
@@ -466,15 +515,23 @@ def marketplace_dashboard():
 
     statuses = ("Available", "Reserved", "Sold", "Inactive")
     status_report = [
-        {"label": label, "count": status_rows.get(label, 0), "percentage": _percentage(status_rows.get(label, 0), total_listings)}
+        {
+            "label": label,
+            "count": status_rows.get(label, 0),
+            "percentage": _percentage(status_rows.get(label, 0), total_listings),
+        }
         for label in statuses
     ]
     type_report = [
         {
             "label": label,
             "count": type_rows.get(label).count if label in type_rows else 0,
-            "percentage": _percentage(type_rows.get(label).count if label in type_rows else 0, total_listings),
-            "average_price": type_rows.get(label).average_price if label in type_rows else 0,
+            "percentage": _percentage(
+                type_rows.get(label).count if label in type_rows else 0, total_listings
+            ),
+            "average_price": (
+                type_rows.get(label).average_price if label in type_rows else 0
+            ),
         }
         for label in PROPERTY_TYPE_LABELS
     ]
@@ -485,11 +542,32 @@ def marketplace_dashboard():
         "reserved_listings": status_rows.get("Reserved", 0),
     }
     chart_data = {
-        "property_status": {"labels": list(statuses), "values": [status_rows.get(label, 0) for label in statuses]},
-        "property_types": {"labels": list(PROPERTY_TYPE_LABELS), "values": [item["count"] for item in type_report]},
-        "monthly_listings": {"labels": [_month_label(int(row.year), int(row.month)) for row in monthly_rows if row.year and row.month], "values": [row.count for row in monthly_rows if row.year and row.month]},
-        "agent_performance": {"labels": [f"{row.first_name} {row.last_name}" for row in agents_report[:10]], "values": [row.sales for row in agents_report[:10]]},
-        "seller_performance": {"labels": [row.seller for row in sellers_report[:10]], "values": [float(row.revenue) for row in sellers_report[:10]]},
+        "property_status": {
+            "labels": list(statuses),
+            "values": [status_rows.get(label, 0) for label in statuses],
+        },
+        "property_types": {
+            "labels": list(PROPERTY_TYPE_LABELS),
+            "values": [item["count"] for item in type_report],
+        },
+        "monthly_listings": {
+            "labels": [
+                _month_label(int(row.year), int(row.month))
+                for row in monthly_rows
+                if row.year and row.month
+            ],
+            "values": [row.count for row in monthly_rows if row.year and row.month],
+        },
+        "agent_performance": {
+            "labels": [
+                f"{row.first_name} {row.last_name}" for row in agents_report[:10]
+            ],
+            "values": [row.sales for row in agents_report[:10]],
+        },
+        "seller_performance": {
+            "labels": [row.seller for row in sellers_report[:10]],
+            "values": [float(row.revenue) for row in sellers_report[:10]],
+        },
     }
 
     return render_template(
@@ -498,7 +576,9 @@ def marketplace_dashboard():
         date_from=start_date.isoformat() if start_date else "",
         date_to=end_date.isoformat() if end_date else "",
         filters=request.args,
-        filter_params={key: value for key, value in request.args.items() if key != "page"},
+        filter_params={
+            key: value for key, value in request.args.items() if key != "page"
+        },
         property_types=PROPERTY_TYPE_LABELS,
         statuses=statuses,
         sellers=Seller.query.order_by(Seller.full_name, Seller.company_name).all(),
@@ -510,5 +590,204 @@ def marketplace_dashboard():
         sellers_report=sellers_report,
         agents_report=agents_report,
         buyer_interest=buyer_interest,
+        chart_data=chart_data,
+    )
+
+
+@reports.route("/transactions")
+@reports.route("/transactions/", strict_slashes=False)
+@require_permission("reports.transactions")
+def transactions_dashboard():
+    selected_period, start_date, end_date = _date_window()
+    page, per_page = _pagination_args()
+
+    transaction_query = (
+        PropertyTransaction.query.join(
+            Property, Property.id == PropertyTransaction.property_id
+        )
+        .outerjoin(Buyer, Buyer.id == PropertyTransaction.buyer_id)
+        .outerjoin(Seller, Seller.id == PropertyTransaction.seller_id)
+    )
+    transaction_query = _apply_date_window(
+        transaction_query, PropertyTransaction.completion_date, start_date, end_date
+    )
+
+    status = request.args.get("status", "").strip()
+    seller_id = request.args.get("seller_id", "").strip()
+    agent_id = request.args.get("agent_id", "").strip()
+    search = request.args.get("q", "").strip()
+    if status in TRANSACTION_STATUSES:
+        transaction_query = transaction_query.filter(
+            PropertyTransaction.transaction_status == status
+        )
+    if seller_id.isdigit():
+        transaction_query = transaction_query.filter(
+            PropertyTransaction.seller_id == int(seller_id)
+        )
+    if agent_id.isdigit():
+        transaction_query = transaction_query.filter(Property.agent_id == int(agent_id))
+    if search:
+        pattern = f"%{search}%"
+        transaction_query = transaction_query.filter(
+            or_(
+                PropertyTransaction.transaction_number.ilike(pattern),
+                Property.listing_number.ilike(pattern),
+                Property.title.ilike(pattern),
+                Buyer.full_name.ilike(pattern),
+                Buyer.company_name.ilike(pattern),
+                Seller.full_name.ilike(pattern),
+                Seller.company_name.ilike(pattern),
+            )
+        )
+
+    payment_totals = (
+        PropertyPayment.query.with_entities(
+            PropertyPayment.sale_agreement_id,
+            func.coalesce(
+                func.sum(
+                    case(
+                        (
+                            PropertyPayment.payment_type == "Refund",
+                            -PropertyPayment.amount,
+                        ),
+                        else_=PropertyPayment.amount,
+                    )
+                ),
+                0,
+            ).label("paid"),
+        )
+        .group_by(PropertyPayment.sale_agreement_id)
+        .subquery()
+    )
+    commission_totals = (
+        PropertyCommission.query.with_entities(
+            PropertyCommission.sale_agreement_id,
+            func.coalesce(func.sum(PropertyCommission.commission_amount), 0).label(
+                "generated"
+            ),
+            func.coalesce(func.sum(PropertyCommission.amount_paid), 0).label(
+                "commission_paid"
+            ),
+            func.coalesce(func.sum(PropertyCommission.balance), 0).label(
+                "commission_balance"
+            ),
+        )
+        .group_by(PropertyCommission.sale_agreement_id)
+        .subquery()
+    )
+    financial_query = transaction_query.outerjoin(
+        payment_totals,
+        payment_totals.c.sale_agreement_id == PropertyTransaction.sale_agreement_id,
+    ).outerjoin(
+        commission_totals,
+        commission_totals.c.sale_agreement_id == PropertyTransaction.sale_agreement_id,
+    )
+    total_transactions = transaction_query.count()
+    status_counts = dict(
+        transaction_query.with_entities(
+            PropertyTransaction.transaction_status, func.count(PropertyTransaction.id)
+        )
+        .group_by(PropertyTransaction.transaction_status)
+        .all()
+    )
+    completed_query = transaction_query.filter(
+        PropertyTransaction.transaction_status == "Completed"
+    )
+    completed_value = _money(
+        completed_query.with_entities(
+            func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0)
+        ).scalar()
+    )
+    average_completed_value = _money(
+        completed_query.with_entities(
+            func.coalesce(func.avg(PropertyTransaction.final_sale_price), 0)
+        ).scalar()
+    )
+    financial_totals = (
+        financial_query.with_entities(
+            func.coalesce(func.sum(payment_totals.c.paid), 0),
+            func.coalesce(
+                func.sum(
+                    SaleAgreement.agreed_price - func.coalesce(payment_totals.c.paid, 0)
+                ),
+                0,
+            ),
+            func.coalesce(func.sum(commission_totals.c.generated), 0),
+            func.coalesce(func.sum(commission_totals.c.commission_paid), 0),
+            func.coalesce(func.sum(commission_totals.c.commission_balance), 0),
+        )
+        .join(SaleAgreement, SaleAgreement.id == PropertyTransaction.sale_agreement_id)
+        .first()
+    )
+
+    transactions = (
+        transaction_query.options(
+            joinedload(PropertyTransaction.property),
+            joinedload(PropertyTransaction.buyer),
+            joinedload(PropertyTransaction.seller),
+            joinedload(PropertyTransaction.sale_agreement),
+        )
+        .order_by(
+            PropertyTransaction.completion_date.desc(), PropertyTransaction.id.desc()
+        )
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+    monthly_rows = (
+        completed_query.with_entities(
+            func.extract("year", PropertyTransaction.completion_date).label("year"),
+            func.extract("month", PropertyTransaction.completion_date).label("month"),
+            func.count(PropertyTransaction.id).label("count"),
+            func.coalesce(func.sum(PropertyTransaction.final_sale_price), 0).label(
+                "value"
+            ),
+        )
+        .group_by("year", "month")
+        .order_by("year", "month")
+        .all()
+    )
+    filter_params = {key: value for key, value in request.args.items() if key != "page"}
+    summary = {
+        "total_transactions": total_transactions,
+        "completed_transactions": status_counts.get("Completed", 0),
+        "pending_transactions": status_counts.get("Pending Completion", 0),
+        "cancelled_transactions": status_counts.get("Cancelled", 0),
+        "completed_value": completed_value,
+        "average_completed_value": average_completed_value,
+        "payments_received": _money(financial_totals[0]),
+        "payments_outstanding": _money(financial_totals[1]),
+        "commission_generated": _money(financial_totals[2]),
+        "commission_paid": _money(financial_totals[3]),
+        "commission_outstanding": _money(financial_totals[4]),
+    }
+    chart_data = {
+        "status": {
+            "labels": list(TRANSACTION_STATUSES),
+            "values": [status_counts.get(label, 0) for label in TRANSACTION_STATUSES],
+        },
+        "monthly_sales": {
+            "labels": [
+                _month_label(int(row.year), int(row.month)) for row in monthly_rows
+            ],
+            "values": [row.count for row in monthly_rows],
+        },
+        "monthly_value": {
+            "labels": [
+                _month_label(int(row.year), int(row.month)) for row in monthly_rows
+            ],
+            "values": [float(row.value) for row in monthly_rows],
+        },
+    }
+    return render_template(
+        "reports/transactions.html",
+        selected_period=selected_period,
+        date_from=start_date.isoformat() if start_date else "",
+        date_to=end_date.isoformat() if end_date else "",
+        filters=request.args,
+        filter_params=filter_params,
+        statuses=TRANSACTION_STATUSES,
+        sellers=Seller.query.order_by(Seller.full_name, Seller.company_name).all(),
+        agents=Agent.query.order_by(Agent.first_name, Agent.last_name).all(),
+        transactions=transactions,
+        summary=summary,
         chart_data=chart_data,
     )
