@@ -1,0 +1,8 @@
+{% if current_user.is_authenticated and current_user.has_permission("reports.export") %}
+<div class="d-flex gap-2 flex-wrap mb-3">
+    <a class="btn btn-outline-success btn-sm" href="{{ url_for('reports.export_report', report_name=report_name, file_format='csv', **request.args) }}">Export CSV</a>
+    <a class="btn btn-outline-primary btn-sm" href="{{ url_for('reports.export_report', report_name=report_name, file_format='xlsx', **request.args) }}">Export Excel</a>
+    <a class="btn btn-outline-secondary btn-sm" href="{{ url_for('reports.analytics_dashboard') }}">Analytics</a>
+    <form method="post" action="{{ url_for('reports.report_favorite', action='add', report_name=report_name) }}"><input type="hidden" name="next" value="{{ request.full_path }}"><button class="btn btn-outline-warning btn-sm" type="submit">Add Favorite</button></form>
+</div>
+{% endif %}

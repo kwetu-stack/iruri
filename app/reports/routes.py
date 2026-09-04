@@ -1,7 +1,8 @@
 from datetime import date, datetime, time, timedelta
 from decimal import Decimal
 
-from flask import render_template, request
+from flask import abort, redirect, render_template, request, session, url_for
+from flask_login import current_user
 from sqlalchemy import case, func, or_
 from sqlalchemy.orm import joinedload
 
@@ -11,6 +12,7 @@ from app.admin.email_templates import EMAIL_TEMPLATE_CATEGORIES, EmailTemplate
 from app.admin.models import SystemBackup
 from app.admin.roles import Permission, Role
 from app.audit.models import AuditLog
+from app.audit.service import record_audit
 from app.notifications.models import Notification
 from app.auth.models import User
 from app.buyers.models import Buyer
@@ -25,6 +27,7 @@ from app.sellers.models import Seller
 from app.transactions.models import TRANSACTION_STATUSES, PropertyTransaction
 from app.utils.permissions import require_permission
 from app.viewings.models import ViewingRequest
+from app.reports.export_service import build_report_response
 
 FILTER_OPTIONS = ("today", "week", "month", "year", "custom")
 PROPERTY_TYPE_LABELS = ("Apartment", "House", "Villa", "Land", "Commercial", "Other")
@@ -1481,4 +1484,214 @@ def administration_dashboard():
         kpis=kpis,
         chart_data=chart_data,
         latest_backup=latest_backup,
+    )
+
+
+REPORT_PERMISSIONS = {
+    "executive": "reports.executive",
+    "marketplace": "reports.marketplace",
+    "transactions": "reports.transactions",
+    "financial": "reports.financial",
+    "administration": "reports.administration",
+}
+
+
+def _report_export_rows(report_name, start_date, end_date):
+    if report_name in {"executive", "transactions", "financial"}:
+        query = _apply_date_window(
+            PropertyTransaction.query.options(
+                joinedload(PropertyTransaction.property),
+                joinedload(PropertyTransaction.buyer),
+                joinedload(PropertyTransaction.seller),
+            ),
+            PropertyTransaction.completion_date,
+            start_date,
+            end_date,
+        )
+        return [
+            {
+                "Transaction Number": row.transaction_number,
+                "Property": row.property.title if row.property else "N/A",
+                "Buyer": _buyer_name_value(row.buyer),
+                "Seller": _seller_name_value(row.seller),
+                "Sale Amount": row.final_sale_price,
+                "Status": row.transaction_status,
+                "Date": row.completion_date,
+            }
+            for row in query.order_by(PropertyTransaction.completion_date.desc()).all()
+        ], [
+            "Transaction Number",
+            "Property",
+            "Buyer",
+            "Seller",
+            "Sale Amount",
+            "Status",
+            "Date",
+        ]
+    if report_name == "marketplace":
+        query = _apply_datetime_window(
+            Property.query.options(
+                joinedload(Property.seller), joinedload(Property.agent)
+            ),
+            Property.created_at,
+            *_datetime_bounds(start_date, end_date),
+        )
+        return [
+            {
+                "Property Reference": row.listing_number,
+                "Title": row.title,
+                "Type": row.property_type,
+                "Seller": _seller_name_value(row.seller),
+                "Agent": row.agent.full_name if row.agent else "N/A",
+                "Status": row.status,
+                "Created": row.created_at,
+            }
+            for row in query.order_by(Property.created_at.desc()).all()
+        ], [
+            "Property Reference",
+            "Title",
+            "Type",
+            "Seller",
+            "Agent",
+            "Status",
+            "Created",
+        ]
+    query = _apply_datetime_window(
+        AuditLog.query, AuditLog.created_at, *_datetime_bounds(start_date, end_date)
+    )
+    return [
+        {
+            "Event Number": row.event_number,
+            "Date": row.created_at,
+            "User": row.username,
+            "Action": row.action,
+            "Module": row.module,
+            "Status": row.status,
+            "Description": row.description,
+        }
+        for row in query.order_by(AuditLog.created_at.desc()).all()
+    ], ["Event Number", "Date", "User", "Action", "Module", "Status", "Description"]
+
+
+def _buyer_name_value(buyer):
+    return (
+        (buyer.full_name or buyer.company_name or buyer.buyer_number)
+        if buyer
+        else "N/A"
+    )
+
+
+def _seller_name_value(seller):
+    return (
+        (seller.full_name or seller.company_name or seller.seller_number)
+        if seller
+        else "N/A"
+    )
+
+
+@reports.route("/export/<report_name>/<file_format>")
+@require_permission("reports.export")
+def export_report(report_name, file_format):
+    if report_name not in REPORT_PERMISSIONS or file_format not in ("csv", "xlsx"):
+        abort(404)
+    if not current_user.has_permission(REPORT_PERMISSIONS[report_name]):
+        abort(403)
+    _, start_date, end_date = _date_window()
+    rows, columns = _report_export_rows(report_name, start_date, end_date)
+    applied = (
+        ", ".join(
+            f"{key}={value}" for key, value in request.args.items() if key != "page"
+        )
+        or "None"
+    )
+    filters = {
+        "date_range": f"{start_date or 'All'} to {end_date or 'All'}",
+        "applied": applied,
+    }
+    record_audit(
+        "Export",
+        "Reports",
+        f"Exported {report_name} report as {file_format} ({len(rows)} rows)",
+    )
+    return build_report_response(
+        report_name.title() + " Reports",
+        current_user.email,
+        filters,
+        columns,
+        rows,
+        file_format,
+        f"{report_name}-report-{datetime.utcnow():%Y%m%d-%H%M%S}",
+    )
+
+
+@reports.route("/saved-filters/<action>", methods=["POST"])
+@require_permission("reports.export")
+def saved_filters(action):
+    saved = session.setdefault("saved_report_filters", {})
+    name = request.form.get("name", "").strip()
+    if action == "save" and name:
+        saved[name] = {
+            key: value for key, value in request.form.items() if key != "name"
+        }
+        session.modified = True
+    elif action == "delete" and name:
+        saved.pop(name, None)
+        session.modified = True
+    return redirect(request.form.get("next") or url_for("reports.analytics_dashboard"))
+
+
+@reports.route("/favorites/<action>/<report_name>", methods=["POST"])
+@require_permission("reports.export")
+def report_favorite(action, report_name):
+    favorites = set(session.get("favorite_reports", []))
+    if action == "add":
+        favorites.add(report_name)
+    elif action == "remove":
+        favorites.discard(report_name)
+    session["favorite_reports"] = sorted(favorites)
+    return redirect(request.form.get("next") or url_for("reports.analytics_dashboard"))
+
+
+@reports.route("/analytics")
+@require_permission("reports.export")
+def analytics_dashboard():
+    viewed = (
+        ActivityLog.query.filter_by(module="Reports", activity_type="View")
+        .order_by(ActivityLog.created_at.desc())
+        .limit(10)
+        .all()
+    )
+    exports = (
+        AuditLog.query.filter_by(module="Reports", action="Export")
+        .order_by(AuditLog.created_at.desc())
+        .limit(10)
+        .all()
+    )
+    views = dict(
+        db.session.query(ActivityLog.title, func.count(ActivityLog.id))
+        .filter_by(module="Reports", activity_type="View")
+        .group_by(ActivityLog.title)
+        .order_by(func.count(ActivityLog.id).desc())
+        .limit(10)
+        .all()
+    )
+    export_counts = dict(
+        db.session.query(AuditLog.action, func.count(AuditLog.id))
+        .filter_by(module="Reports", action="Export")
+        .group_by(AuditLog.action)
+        .all()
+    )
+    return render_template(
+        "reports/analytics.html",
+        viewed=viewed,
+        exports=exports,
+        favorites=session.get("favorite_reports", []),
+        saved_filters=session.get("saved_report_filters", {}),
+        chart_data={
+            "views": {"labels": list(views), "values": list(views.values())},
+            "exports": {
+                "labels": list(export_counts),
+                "values": list(export_counts.values()),
+            },
+        },
     )

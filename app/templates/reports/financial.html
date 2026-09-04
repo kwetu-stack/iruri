@@ -3,6 +3,7 @@
 {% block title %}Financial Reports | IRURI{% endblock %}
 
 {% block dashboard_content %}
+{% set report_name = "financial" %}{% include "reports/_export_controls.html" %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
         <h2 class="mb-1">Financial Reports</h2>

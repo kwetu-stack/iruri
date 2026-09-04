@@ -3,6 +3,7 @@
 {% block title %}Administration Reports | IRURI{% endblock %}
 
 {% block dashboard_content %}
+{% set report_name = "administration" %}{% include "reports/_export_controls.html" %}
 <div class="d-flex justify-content-between align-items-center mb-4"><div><h2 class="mb-1">Administration Reports</h2><p class="text-muted mb-0">Operational visibility into users, audit activity, notifications, templates, and backups</p></div></div>
 
 <form method="get" class="card shadow-sm border-0 mb-4"><div class="card-body"><div class="row g-2 align-items-end">
