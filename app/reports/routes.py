@@ -6,6 +6,13 @@ from sqlalchemy import case, func, or_
 from sqlalchemy.orm import joinedload
 
 from app.agents.models import Agent
+from app.activities.models import ActivityLog
+from app.admin.email_templates import EMAIL_TEMPLATE_CATEGORIES, EmailTemplate
+from app.admin.models import SystemBackup
+from app.admin.roles import Permission, Role
+from app.audit.models import AuditLog
+from app.notifications.models import Notification
+from app.auth.models import User
 from app.buyers.models import Buyer
 from app.commissions.models import PropertyCommission
 from app.extensions import db
@@ -1193,4 +1200,285 @@ def financial_dashboard():
         },
         chart_data=chart_data,
         grouping=grouping,
+    )
+
+
+@reports.route("/administration")
+@reports.route("/administration/", strict_slashes=False)
+@require_permission("reports.administration")
+def administration_dashboard():
+    selected_period, start_date, end_date = _date_window()
+    page, per_page = _pagination_args()
+    user_id = request.args.get("user_id", "").strip()
+    role_name = request.args.get("role", "").strip()
+    status = request.args.get("status", "").strip()
+    module = request.args.get("module", "").strip()
+    notification_type = request.args.get("notification_type", "").strip()
+    search = request.args.get("q", "").strip()
+    start_at, end_at = _datetime_bounds(start_date, end_date)
+
+    def apply_user_filters(query, date_column=None):
+        if date_column is not None:
+            query = _apply_datetime_window(query, date_column, start_at, end_at)
+        if user_id.isdigit():
+            query = query.filter(User.id == int(user_id))
+        if role_name:
+            query = query.filter(Role.name == role_name)
+        if status in ("Active", "Inactive", "Success", "Failed", "Read", "Unread"):
+            if status == "Active":
+                query = query.filter(User.is_active.is_(True))
+            elif status == "Inactive":
+                query = query.filter(User.is_active.is_(False))
+        if search:
+            pattern = f"%{search}%"
+            query = query.filter(
+                or_(
+                    User.first_name.ilike(pattern),
+                    User.last_name.ilike(pattern),
+                    User.email.ilike(pattern),
+                    Role.name.ilike(pattern),
+                )
+            )
+        return query
+
+    last_activity = (
+        db.session.query(func.max(ActivityLog.created_at))
+        .filter(ActivityLog.user_id == User.id)
+        .correlate(User)
+        .scalar_subquery()
+    )
+    users_query = apply_user_filters(User.query.outerjoin(Role), User.created_at)
+    users = (
+        users_query.options(joinedload(User.role_record))
+        .order_by(User.created_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+    user_activity_rows = users_query.with_entities(
+        User, Role.name.label("role_name"), last_activity.label("last_activity")
+    ).all()
+
+    audit_query = AuditLog.query.outerjoin(User).outerjoin(
+        Role, Role.id == User.role_id
+    )
+    audit_query = _apply_datetime_window(
+        audit_query, AuditLog.created_at, start_at, end_at
+    )
+    if user_id.isdigit():
+        audit_query = audit_query.filter(AuditLog.user_id == int(user_id))
+    if role_name:
+        audit_query = audit_query.filter(Role.name == role_name)
+    if module:
+        audit_query = audit_query.filter(AuditLog.module == module)
+    if status in ("Success", "Failed"):
+        audit_query = audit_query.filter(AuditLog.status == status)
+    if search:
+        pattern = f"%{search}%"
+        audit_query = audit_query.filter(
+            or_(
+                AuditLog.event_number.ilike(pattern),
+                AuditLog.action.ilike(pattern),
+                AuditLog.description.ilike(pattern),
+                AuditLog.module.ilike(pattern),
+                AuditLog.username.ilike(pattern),
+            )
+        )
+    audit_logs = (
+        audit_query.options(joinedload(AuditLog.user))
+        .order_by(AuditLog.created_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    notification_query = Notification.query.join(User).outerjoin(Role)
+    notification_query = _apply_datetime_window(
+        notification_query, Notification.created_at, start_at, end_at
+    )
+    if user_id.isdigit():
+        notification_query = notification_query.filter(
+            Notification.recipient_id == int(user_id)
+        )
+    if role_name:
+        notification_query = notification_query.filter(Role.name == role_name)
+    if notification_type:
+        notification_query = notification_query.filter(
+            Notification.notification_type == notification_type
+        )
+    if status == "Read":
+        notification_query = notification_query.filter(Notification.is_read.is_(True))
+    elif status == "Unread":
+        notification_query = notification_query.filter(Notification.is_read.is_(False))
+    if search:
+        pattern = f"%{search}%"
+        notification_query = notification_query.filter(
+            or_(
+                Notification.notification_number.ilike(pattern),
+                Notification.title.ilike(pattern),
+                Notification.message.ilike(pattern),
+                User.first_name.ilike(pattern),
+                User.last_name.ilike(pattern),
+            )
+        )
+    notifications = (
+        notification_query.options(joinedload(Notification.recipient))
+        .order_by(Notification.created_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    template_query = _apply_datetime_window(
+        EmailTemplate.query, EmailTemplate.created_at, start_at, end_at
+    )
+    if search:
+        pattern = f"%{search}%"
+        template_query = template_query.filter(
+            or_(
+                EmailTemplate.template_name.ilike(pattern),
+                EmailTemplate.template_key.ilike(pattern),
+            )
+        )
+    templates = template_query.order_by(EmailTemplate.template_name).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+    backup_query = SystemBackup.query.outerjoin(
+        User, User.id == SystemBackup.created_by
+    )
+    backup_query = _apply_datetime_window(
+        backup_query, SystemBackup.created_at, start_at, end_at
+    )
+    if user_id.isdigit():
+        backup_query = backup_query.filter(SystemBackup.created_by == int(user_id))
+    if status in ("Pending", "Running", "Completed", "Failed"):
+        backup_query = backup_query.filter(SystemBackup.status == status)
+    if search:
+        pattern = f"%{search}%"
+        backup_query = backup_query.filter(
+            or_(
+                SystemBackup.backup_number.ilike(pattern),
+                SystemBackup.backup_name.ilike(pattern),
+                User.first_name.ilike(pattern),
+                User.last_name.ilike(pattern),
+            )
+        )
+    backups = (
+        backup_query.options(joinedload(SystemBackup.creator))
+        .order_by(SystemBackup.created_at.desc())
+        .paginate(page=page, per_page=per_page, error_out=False)
+    )
+
+    roles = (
+        Role.query.options(joinedload(Role.permissions), joinedload(Role.users))
+        .order_by(Role.name)
+        .all()
+    )
+    audit_modules = [
+        row[0]
+        for row in db.session.query(AuditLog.module)
+        .distinct()
+        .order_by(AuditLog.module)
+        .all()
+    ]
+    user_activity = dict(
+        users_query.with_entities(
+            func.strftime("%Y-%m-%d", User.created_at), func.count(User.id)
+        )
+        .group_by(func.strftime("%Y-%m-%d", User.created_at))
+        .order_by(func.strftime("%Y-%m-%d", User.created_at))
+        .all()
+    )
+    audit_activity = dict(
+        audit_query.with_entities(
+            func.strftime("%Y-%m-%d", AuditLog.created_at), func.count(AuditLog.id)
+        )
+        .group_by(func.strftime("%Y-%m-%d", AuditLog.created_at))
+        .order_by(func.strftime("%Y-%m-%d", AuditLog.created_at))
+        .all()
+    )
+    notification_status = dict(
+        notification_query.with_entities(
+            case((Notification.is_read.is_(True), "Read"), else_="Unread"),
+            func.count(Notification.id),
+        )
+        .group_by(Notification.is_read)
+        .all()
+    )
+    backup_frequency = dict(
+        backup_query.with_entities(
+            func.strftime("%Y-%m-%d", SystemBackup.created_at),
+            func.count(SystemBackup.id),
+        )
+        .group_by(func.strftime("%Y-%m-%d", SystemBackup.created_at))
+        .order_by(func.strftime("%Y-%m-%d", SystemBackup.created_at))
+        .all()
+    )
+    latest_backup = (
+        SystemBackup.query.filter_by(status="Completed")
+        .order_by(SystemBackup.created_at.desc())
+        .first()
+    )
+    kpis = {
+        "total_users": users_query.count(),
+        "active_users": users_query.filter(User.is_active.is_(True)).count(),
+        "disabled_users": users_query.filter(User.is_active.is_(False)).count(),
+        "administrators": users_query.filter(
+            func.lower(Role.name).in_(("administrator", "super administrator"))
+        ).count(),
+        "total_roles": Role.query.count(),
+        "total_permissions": Permission.query.count(),
+        "total_notifications": notification_query.count(),
+        "total_audit_logs": audit_query.count(),
+        "total_templates": template_query.count(),
+        "total_backups": backup_query.count(),
+        "last_backup_date": latest_backup.created_at if latest_backup else None,
+    }
+    chart_labels = sorted(
+        set(user_activity) | set(audit_activity) | set(backup_frequency)
+    )
+    chart_data = {
+        "user_growth": {
+            "labels": chart_labels,
+            "values": [user_activity.get(label, 0) for label in chart_labels],
+        },
+        "roles": {
+            "labels": [role.name for role in roles],
+            "values": [len(role.users) for role in roles],
+        },
+        "daily_logins": {
+            "labels": chart_labels,
+            "values": [user_activity.get(label, 0) for label in chart_labels],
+        },
+        "audit_activity": {
+            "labels": chart_labels,
+            "values": [audit_activity.get(label, 0) for label in chart_labels],
+        },
+        "notifications": {
+            "labels": ["Read", "Unread"],
+            "values": [
+                notification_status.get("Read", 0),
+                notification_status.get("Unread", 0),
+            ],
+        },
+        "backups": {
+            "labels": chart_labels,
+            "values": [backup_frequency.get(label, 0) for label in chart_labels],
+        },
+    }
+    filter_params = {key: value for key, value in request.args.items() if key != "page"}
+    return render_template(
+        "reports/administration.html",
+        selected_period=selected_period,
+        date_from=start_date.isoformat() if start_date else "",
+        date_to=end_date.isoformat() if end_date else "",
+        filters=request.args,
+        filter_params=filter_params,
+        users_list=User.query.order_by(User.first_name, User.last_name).all(),
+        roles=roles,
+        audit_modules=audit_modules,
+        notification_types=("Information", "Success", "Warning", "Error", "Reminder"),
+        users=users,
+        user_activity_rows=user_activity_rows,
+        audit_logs=audit_logs,
+        notifications=notifications,
+        templates=templates,
+        backups=backups,
+        kpis=kpis,
+        chart_data=chart_data,
+        latest_backup=latest_backup,
     )

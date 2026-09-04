@@ -118,6 +118,7 @@ PERMISSION_GROUPS = {
         "reports.marketplace",
         "reports.transactions",
         "reports.financial",
+        "reports.administration",
     ),
 }
 
