@@ -1,8 +1,10 @@
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload, selectinload
-from flask import abort, flash, render_template, request, url_for
+from flask import abort, flash, redirect, render_template, request, url_for
+from flask_login import current_user
 
 from app.agents.models import Agent
+from app.agencies.models import Agency
 from app.developers.models import Developer
 from app.extensions import db
 from app.audit.service import record_audit
@@ -15,6 +17,42 @@ from app.public.forms import EnquiryForm, SearchForm
 PROPERTY_IMAGE = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
 HERO_IMAGE = "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=2200&q=85"
 PUBLIC_STATUSES = ("Published", "Available", "Visible")
+
+
+def _public_agents_query():
+    return Agent.query.filter(
+        Agent.is_active.is_(True), Agent.license_number.isnot(None)
+    )
+
+
+def _agent_counties():
+    return [
+        value
+        for (value,) in db.session.query(Agent.county)
+        .filter(
+            Agent.is_active.is_(True),
+            Agent.license_number.isnot(None),
+            Agent.county.isnot(None),
+        )
+        .distinct()
+        .order_by(Agent.county)
+        .all()
+    ]
+
+
+def _developer_counties():
+    return [
+        value
+        for (value,) in db.session.query(Developer.county)
+        .filter(
+            Developer.is_active.is_(True),
+            Developer.is_verified.is_(True),
+            Developer.county.isnot(None),
+        )
+        .distinct()
+        .order_by(Developer.county)
+        .all()
+    ]
 
 
 def _available_properties(listing_type=None):
@@ -103,12 +141,7 @@ def home():
         .limit(4)
         .all()
     )
-    agents = (
-        Agent.query.filter_by(is_active=True)
-        .order_by(Agent.created_at.desc())
-        .limit(4)
-        .all()
-    )
+    agents = _public_agents_query().order_by(Agent.created_at.desc()).limit(4).all()
     developers = (
         Developer.query.filter_by(is_active=True)
         .order_by(Developer.is_verified.desc(), Developer.created_at.desc())
@@ -227,20 +260,147 @@ def property_detail(id):
 
 @public.get("/agents")
 def agents():
-    agent_list = (
-        Agent.query.filter_by(is_active=True).order_by(Agent.created_at.desc()).all()
+    county = request.args.get("county", "").strip()
+    agency = request.args.get("agency", "").strip()
+    name = request.args.get("name", "").strip()
+    specialization = request.args.get("specialization", "").strip()
+    query = _public_agents_query()
+    if county:
+        query = query.filter(Agent.county.ilike(f"%{county}%"))
+    if name:
+        query = query.filter(
+            db.or_(
+                Agent.first_name.ilike(f"%{name}%"),
+                Agent.last_name.ilike(f"%{name}%"),
+            )
+        )
+    if specialization:
+        query = query.filter(Agent.bio.ilike(f"%{specialization}%"))
+    agents_with_counts = [
+        (agent, _available_properties().filter(Property.agent_id == agent.id).count())
+        for agent in query.order_by(Agent.created_at.desc()).all()
+    ]
+    return render_template(
+        "public/agents.html",
+        agents=agents_with_counts,
+        counties=_agent_counties(),
+        agencies=[],
+        selected_county=county,
+        selected_agency=agency,
+        selected_name=name,
+        selected_specialization=specialization,
     )
-    return render_template("public/agents.html", agents=agent_list)
+
+
+@public.get("/agents/<int:id>")
+def agent_detail(id):
+    if current_user.is_authenticated:
+        return redirect(url_for("agents.details", id=id))
+    agent = _public_agents_query().filter_by(id=id).first_or_404()
+    listings = (
+        _available_properties()
+        .filter(Property.agent_id == agent.id)
+        .options(selectinload(Property.images))
+        .order_by(Property.featured.desc(), Property.created_at.desc())
+        .all()
+    )
+    return render_template(
+        "public/agent_detail.html",
+        agent=agent,
+        listings=listings,
+        agency=None,
+    )
+
+
+@public.get("/agencies")
+def agency_directory():
+    county = request.args.get("county", "").strip()
+    query = Agency.query.filter_by(is_active=True)
+    if county:
+        query = query.filter(Agency.county.ilike(f"%{county}%"))
+    agencies = query.order_by(Agency.agency_name).all()
+    return render_template(
+        "public/agencies.html",
+        agencies=agencies,
+        counties=[
+            value
+            for (value,) in db.session.query(Agency.county)
+            .filter(Agency.is_active.is_(True), Agency.county.isnot(None))
+            .distinct()
+            .order_by(Agency.county)
+            .all()
+        ],
+        selected_county=county,
+    )
+
+
+@public.get("/agencies/<int:id>")
+def agency_detail(id):
+    if current_user.is_authenticated:
+        return redirect(url_for("agencies.details", id=id))
+    agency = Agency.query.filter_by(id=id, is_active=True).first_or_404()
+    return render_template(
+        "public/agency_detail.html",
+        agency=agency,
+        team_members=[],
+        listings=[],
+        featured_properties=[],
+    )
 
 
 @public.get("/developers")
 def developers():
-    developer_list = (
-        Developer.query.filter_by(is_active=True)
-        .order_by(Developer.is_verified.desc(), Developer.created_at.desc())
+    county = request.args.get("county", "").strip()
+    project_type = request.args.get("project_type", "").strip()
+    query = Developer.query.filter_by(is_active=True, is_verified=True)
+    if county:
+        query = query.filter(Developer.county.ilike(f"%{county}%"))
+    developers_list = query.order_by(Developer.created_at.desc()).all()
+    if project_type:
+        developers_list = [
+            developer
+            for developer in developers_list
+            if any(
+                (property.property_type or "").lower() == project_type.lower()
+                for property in developer.properties
+                if property.status
+                and property.status.lower()
+                in {status.lower() for status in PUBLIC_STATUSES}
+            )
+        ]
+    return render_template(
+        "public/developers.html",
+        developers=developers_list,
+        counties=_developer_counties(),
+        project_types=["Apartment", "House", "Land", "Commercial"],
+        selected_county=county,
+        selected_project_type=project_type,
+    )
+
+
+@public.get("/developers/<int:id>")
+def developer_detail(id):
+    if current_user.is_authenticated:
+        return redirect(url_for("developers.details", id=id))
+    developer = Developer.query.filter_by(
+        id=id, is_active=True, is_verified=True
+    ).first_or_404()
+    current_developments = (
+        _available_properties()
+        .filter(Property.developer_id == developer.id)
+        .options(selectinload(Property.images))
+        .order_by(Property.featured.desc(), Property.created_at.desc())
         .all()
     )
-    return render_template("public/developers.html", developers=developer_list)
+    return render_template(
+        "public/developer_detail.html",
+        developer=developer,
+        current_developments=current_developments,
+        completed_developments=[],
+        featured_projects=[
+            property for property in current_developments if property.featured
+        ],
+    )
 
 
 @public.get("/about")

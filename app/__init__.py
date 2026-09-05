@@ -96,6 +96,7 @@ def create_app():
         return current_app.view_functions["properties.features_index"]()
 
     app.register_blueprint(auth)
+    app.register_blueprint(public)
     app.register_blueprint(dashboard)
     app.register_blueprint(properties)
     app.register_blueprint(agents)
@@ -114,7 +115,6 @@ def create_app():
     app.register_blueprint(notifications)
     app.register_blueprint(activities)
     app.register_blueprint(reports)
-    app.register_blueprint(public)
     app.register_blueprint(leads)
 
     @app.cli.command("seed")
