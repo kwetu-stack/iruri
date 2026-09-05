@@ -99,9 +99,9 @@ def create_app():
 
     with app.app_context():
        # seed_default_amenities()
-        seed_default_features()
-        seed_default_settings()
-        seed_default_roles_and_permissions()
-        seed_default_email_templates()
+       # seed_default_features()
+       # seed_default_settings()
+       # seed_default_roles_and_permissions()
+       #seed_default_email_templates()
 
     return app
