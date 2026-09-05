@@ -6,7 +6,7 @@ from app.dashboard import dashboard
 
 from config import Config
 from app.extensions import db, migrate, login_manager
-from app.auth import auth
+from app.auth import auth, seed_admin_user
 from app.properties import properties, seed_default_amenities, seed_default_features
 from app.commissions import commissions
 from app.agents import agents
@@ -51,6 +51,7 @@ def run_seed(app=None):
         seed_default_settings()
         seed_default_roles_and_permissions()
         seed_default_email_templates()
+        seed_admin_user()
 
 
 def create_app():
