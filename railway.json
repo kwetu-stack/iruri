@@ -1,6 +1,7 @@
 {
   "$schema": "https://railway.com/railway.schema.json",
   "deploy": {
-    "preDeployCommand": ["python scripts/release.py"]
+    "preDeployCommand": ["python scripts/release.py"],
+    "startCommand": "python scripts/release.py && gunicorn wsgi:app"
   }
 }
