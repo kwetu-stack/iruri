@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}IRURI™ | Find Your Dream Property{% endblock %}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='public/public.css') }}">
+</head>
+<body>
+<nav class="navbar navbar-expand-lg public-nav">
+    <div class="container">
+        <a class="navbar-brand brand-mark" href="{{ url_for('public.home') }}"><span>IRURI</span><small>PROPERTY MARKETPLACE</small></a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicNav" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+        <div class="collapse navbar-collapse" id="publicNav">
+            <div class="navbar-nav ms-auto align-items-lg-center gap-lg-3">
+                <a class="nav-link" href="{{ url_for('public.home') }}">Home</a>
+                <a class="nav-link" href="{{ url_for('public.buy') }}">Buy</a>
+                <a class="nav-link" href="{{ url_for('public.rent') }}">Rent</a>
+                <a class="nav-link" href="{{ url_for('public.developers') }}">Developments</a>
+                <a class="nav-link" href="{{ url_for('public.agents') }}">Agents</a>
+                <a class="nav-link" href="{{ url_for('public.about') }}">About</a>
+                <a class="nav-link" href="{{ url_for('public.contact') }}">Contact</a>
+                <a class="btn btn-gold btn-sm px-3" href="{{ url_for('auth.login') }}">Login</a>
+            </div>
+        </div>
+    </div>
+</nav>
+<main>{% block content %}{% endblock %}</main>
+<footer class="public-footer">
+    <div class="container py-5"><div class="row g-4">
+        <div class="col-lg-5"><a class="brand-mark footer-brand" href="{{ url_for('public.home') }}"><span>IRURI</span><small>PROPERTY MARKETPLACE</small></a><p class="mt-3 mb-0">A more considered way to find a place to live, invest, and belong.</p></div>
+        <div class="col-6 col-lg-2"><h6>Explore</h6><a href="{{ url_for('public.buy') }}">Buy property</a><a href="{{ url_for('public.rent') }}">Rent property</a><a href="{{ url_for('public.developers') }}">Developments</a></div>
+        <div class="col-6 col-lg-2"><h6>Company</h6><a href="{{ url_for('public.about') }}">About IRURI</a><a href="{{ url_for('public.agents') }}">Our agents</a><a href="{{ url_for('public.contact') }}">Contact us</a></div>
+        <div class="col-lg-3"><h6>Get in touch</h6><p>hello@iruri.co.ke<br>+254 700 000 000<br>Nairobi, Kenya</p></div>
+    </div><div class="footer-bottom mt-5 pt-4">© 2026 IRURI™. All rights reserved.</div></div>
+</footer>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.7/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='public/public.js') }}"></script>
+</body>
+</html>

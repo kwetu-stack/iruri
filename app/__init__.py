@@ -25,6 +25,7 @@ from app.audit import audit
 from app.notifications import notifications
 from app.activities import activities
 from app.reports import reports
+from app.public import public
 from app.properties.models import Amenity
 
 import app.models
@@ -66,10 +67,6 @@ def create_app():
     login_manager.init_app(app)
 
     from flask import redirect, url_for
-
-    @app.route("/")
-    def home():
-        return redirect(url_for("auth.login"))
 
     @app.route("/amenities")
     @app.route("/amenities/", strict_slashes=False)
@@ -115,6 +112,7 @@ def create_app():
     app.register_blueprint(notifications)
     app.register_blueprint(activities)
     app.register_blueprint(reports)
+    app.register_blueprint(public)
 
     @app.cli.command("seed")
     def seed_command():

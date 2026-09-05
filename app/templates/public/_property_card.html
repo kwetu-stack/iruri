@@ -1,0 +1,11 @@
+<article class="property-card">
+    {% set image = (property.images|sort(attribute='display_order')|first) if property.images else none %}
+    {% if image %}<img class="property-image" loading="lazy" src="{{ url_for('static', filename='uploads/properties/' ~ image.filename) }}" alt="{{ property.title }}">{% else %}<img class="property-image" loading="lazy" src="{{ property_image|default('https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80') }}" alt="{{ property.title }}">{% endif %}
+    <div class="property-body">
+        <div class="property-price">{{ property.currency or 'KES' }} {{ '{:,.0f}'.format(property.price) }}</div>
+        <h3 class="h5 mt-2 mb-2">{{ property.title }}</h3>
+        <p class="property-meta mb-3">{{ property.town or property.county or 'Kenya' }}{% if property.estate %}, {{ property.estate }}{% endif %}</p>
+        <div class="property-meta mb-3"><span>{{ property.bedrooms or 0 }} beds</span><span>{{ property.bathrooms or 0 }} baths</span><span>{{ property.property_type }}</span></div>
+        <a class="link-arrow" href="{{ url_for('public.property_detail', id=property.id) }}">View details →</a>
+    </div>
+</article>
