@@ -34,6 +34,15 @@
             </a>
         </li>
 
+        {% if current_user.is_authenticated and current_user.has_permission('lead.view') %}
+        <li class="nav-item">
+            <a class="nav-link{% if current_endpoint.startswith('leads.') %} active{% endif %}"
+               href="{{ url_for('leads.index') }}"{% if current_endpoint.startswith('leads.') %} aria-current="page"{% endif %}>
+                📩 Leads
+            </a>
+        </li>
+        {% endif %}
+
         <li class="nav-item">
             <a class="nav-link{% if current_endpoint.startswith('activities.') %} active{% endif %}" href="{{ url_for('activities.index') }}"{% if current_endpoint.startswith('activities.') %} aria-current="page"{% endif %}>
                 📝 Activity Logs

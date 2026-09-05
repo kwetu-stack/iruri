@@ -1,0 +1,28 @@
+{% extends "layouts/dashboard.html" %}
+{% block title %}Leads | IRURI™{% endblock %}
+{% block dashboard_content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+    <div><h2 class="mb-1">Leads</h2><p class="text-muted mb-0">Qualify and follow up with property enquiries.</p></div>
+</div>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-xl-3"><div class="card shadow-sm border-0"><div class="card-body"><p class="text-muted mb-1">Total Leads</p><h3 class="mb-0">{{ stats.total }}</h3></div></div></div>
+    <div class="col-6 col-xl-3"><div class="card shadow-sm border-0"><div class="card-body"><p class="text-muted mb-1">New Leads</p><h3 class="mb-0">{{ stats.new }}</h3></div></div></div>
+    <div class="col-6 col-xl-3"><div class="card shadow-sm border-0"><div class="card-body"><p class="text-muted mb-1">Pending Follow-up</p><h3 class="mb-0">{{ stats.follow_up }}</h3></div></div></div>
+    <div class="col-6 col-xl-3"><div class="card shadow-sm border-0"><div class="card-body"><p class="text-muted mb-1">Closed Leads</p><h3 class="mb-0">{{ stats.closed }}</h3></div></div></div>
+</div>
+<form class="card shadow-sm border-0 mb-4" method="get">
+    <div class="card-body"><div class="row g-3 align-items-end">
+        <div class="col-md-3"><label class="form-label" for="search">Search</label><input class="form-control" id="search" name="search" value="{{ search }}" placeholder="Name, email or reference"></div>
+        <div class="col-md-2"><label class="form-label" for="status">Status</label><select class="form-select" id="status" name="status"><option value="">All statuses</option>{% for option in statuses %}<option value="{{ option }}"{% if selected_status == option %} selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label" for="agent_id">Agent</label><select class="form-select" id="agent_id" name="agent_id"><option value="">All agents</option>{% for agent in agents %}<option value="{{ agent.id }}"{% if selected_agent == agent.id %} selected{% endif %}>{{ agent.full_name }}</option>{% endfor %}</select></div>
+        <div class="col-md-2"><label class="form-label" for="property_id">Property</label><select class="form-select" id="property_id" name="property_id"><option value="">All properties</option>{% for property in properties %}<option value="{{ property.id }}"{% if selected_property == property.id %} selected{% endif %}>{{ property.title }}</option>{% endfor %}</select></div>
+        <div class="col-md-1"><label class="form-label" for="date_from">From</label><input class="form-control" id="date_from" name="date_from" type="date" value="{{ date_from }}"></div>
+        <div class="col-md-1"><label class="form-label" for="date_to">To</label><input class="form-control" id="date_to" name="date_to" type="date" value="{{ date_to }}"></div>
+        <div class="col-md-1"><button class="btn btn-primary w-100" type="submit">Filter</button></div>
+    </div></div>
+</form>
+<div class="card shadow-sm border-0"><div class="table-responsive"><table class="table table-hover align-middle mb-0"><thead><tr><th>Reference</th><th>Lead</th><th>Property</th><th>Agent</th><th>Status</th><th>Received</th><th></th></tr></thead><tbody>
+{% for lead in leads %}<tr><td><a href="{{ url_for('leads.detail', lead_id=lead.id) }}" class="fw-semibold">{{ lead.reference_number }}</a></td><td>{{ lead.name }}<br><small class="text-muted">{{ lead.email }}</small></td><td>{{ lead.property.title }}</td><td>{{ lead.agent.full_name if lead.agent else 'Unassigned' }}</td><td><span class="badge text-bg-light">{{ lead.status }}</span></td><td>{{ lead.created_at.strftime('%Y-%m-%d %H:%M') }}</td><td><a class="btn btn-sm btn-outline-primary" href="{{ url_for('leads.detail', lead_id=lead.id) }}">View</a></td></tr>
+{% else %}<tr><td colspan="7" class="text-center text-muted py-5">No leads match these filters.</td></tr>{% endfor %}
+</tbody></table></div></div>
+{% endblock %}

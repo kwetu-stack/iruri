@@ -1,4 +1,59 @@
-{% block content %}<section class="section pt-5"><div class="container"><a class="link-arrow d-inline-block mb-4" href="{{ url_for('public.buy' if property.listing_type|lower in ['sale', 'for sale'] else 'public.rent') }}">← Back to listings</a>
 {% extends "public/base.html" %}
 {% block title %}{{ property.title }} | IRURI™{% endblock %}
-{% block content %}<section class="section pt-5"><div class="container"><a class="link-arrow d-inline-block mb-4" href="{{ url_for('public.buy' if property.listing_type|lower == 'sale' else 'public.rent') }}">← Back to listings</a><div class="row g-4"><div class="col-lg-7">{% set image = (property.images|sort(attribute='display_order')|first) if property.images else none %}{% if image %}<img class="detail-image" src="{{ url_for('static', filename='uploads/properties/' ~ image.filename) }}" alt="{{ property.title }}">{% else %}<img class="detail-image" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80" alt="{{ property.title }}">{% endif %}</div><div class="col-lg-5"><div class="detail-panel h-100"><span class="eyebrow">{{ property.listing_type|title }} · {{ property.status }}</span><h1 class="mt-3">{{ property.title }}</h1><p class="text-muted">{{ property.town or property.county or 'Kenya' }}{% if property.estate %}, {{ property.estate }}{% endif %}</p><div class="property-price fs-3 my-4">{{ property.currency or 'KES' }} {{ '{:,.0f}'.format(property.price) }}</div><div class="property-meta mb-4"><span>{{ property.bedrooms or 0 }} bedrooms</span><span>{{ property.bathrooms or 0 }} bathrooms</span><span>{{ property.parking or 0 }} parking</span></div><p class="text-muted">{{ property.description or 'A considered property presented by IRURI.' }}</p>{% if property.agent %}<hr><p class="small text-muted mb-1">Listed by</p><h2 class="h5">{{ property.agent.full_name }}</h2><a href="tel:{{ property.agent.phone }}" class="btn btn-gold mt-2">Contact agent</a>{% endif %}</div></div></div></div></section>{% endblock %}
+{% block content %}
+<section class="section pt-5">
+    <div class="container">
+        <a class="link-arrow d-inline-block mb-4" href="{{ url_for('public.buy' if property.listing_type|lower == 'sale' else 'public.rent') }}">← Back to listings</a>
+        <div class="row g-4">
+            <div class="col-lg-7">
+                {% set image = (property.images|sort(attribute='display_order')|first) if property.images else none %}
+                {% if image %}
+                <img class="detail-image" src="{{ url_for('static', filename='uploads/properties/' ~ image.filename) }}" alt="{{ property.title }}">
+                {% else %}
+                <img class="detail-image" src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1400&q=80" alt="{{ property.title }}">
+                {% endif %}
+            </div>
+            <div class="col-lg-5">
+                <div class="detail-panel h-100">
+                    <span class="eyebrow">{{ property.listing_type|title }} · {{ property.status }}</span>
+                    <h1 class="mt-3">{{ property.title }}</h1>
+                    <p class="text-muted">{{ property.town or property.county or 'Kenya' }}{% if property.estate %}, {{ property.estate }}{% endif %}</p>
+                    <div class="property-price fs-3 my-4">{{ property.currency or 'KES' }} {{ '{:,.0f}'.format(property.price) }}</div>
+                    <div class="property-meta mb-4"><span>{{ property.bedrooms or 0 }} bedrooms</span><span>{{ property.bathrooms or 0 }} bathrooms</span><span>{{ property.parking or 0 }} parking</span></div>
+                    <p class="text-muted">{{ property.description or 'A considered property presented by IRURI.' }}</p>
+                    {% if property.agent %}<hr><p class="small text-muted mb-1">Listed by</p><h2 class="h5">{{ property.agent.full_name }}</h2>{% endif %}
+                    <div class="d-flex flex-wrap gap-2 mt-4">
+                        <a class="btn btn-gold" href="#enquiry" data-enquiry-source="Request Viewing">Request Viewing</a>
+                        <a class="btn btn-outline-dark" href="#enquiry" data-enquiry-source="Contact Agent">Contact Agent</a>
+                        <a class="btn btn-outline-dark" href="#enquiry" data-enquiry-source="Send Enquiry">Send Enquiry</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="enquiry" class="mt-5 p-4 bg-white border">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <p class="section-kicker">Start a conversation</p>
+                    <h2 class="section-title mb-3">Tell us how we can help</h2>
+                    {% if submitted %}
+                    <div class="alert alert-success" role="status">Thank you. Your enquiry has been received.</div>
+                    {% else %}
+                    <form method="post" novalidate>
+                        <input type="hidden" name="source" id="enquiry-source" value="{{ form.source }}">
+                        <div class="row g-3">
+                            <div class="col-md-6"><label class="form-label" for="name">Name</label><input class="form-control" id="name" name="name" value="{{ form.name }}" required></div>
+                            <div class="col-md-6"><label class="form-label" for="email">Email</label><input class="form-control" id="email" type="email" name="email" value="{{ form.email }}" required></div>
+                            <div class="col-md-6"><label class="form-label" for="phone">Phone</label><input class="form-control" id="phone" name="phone" value="{{ form.phone }}" required></div>
+                            <div class="col-md-6"><label class="form-label" for="preferred_contact">Preferred contact</label><select class="form-select" id="preferred_contact" name="preferred_contact">{% for option in ('Email', 'Phone', 'WhatsApp') %}<option{% if form.preferred_contact == option %} selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+                            <div class="col-md-6"><label class="form-label" for="budget">Budget (KES, optional)</label><input class="form-control" id="budget" name="budget" type="number" min="0" step="0.01" value="{{ form.budget }}"></div>
+                            <div class="col-12"><label class="form-label" for="message">Message</label><textarea class="form-control" id="message" name="message" rows="5" required>{{ form.message }}</textarea></div>
+                            <div class="col-12"><button class="btn btn-gold" type="submit">Send enquiry</button></div>
+                        </div>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

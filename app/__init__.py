@@ -26,6 +26,7 @@ from app.notifications import notifications
 from app.activities import activities
 from app.reports import reports
 from app.public import public
+from app.leads import leads
 from app.properties.models import Amenity
 
 import app.models
@@ -35,6 +36,7 @@ import app.admin.roles
 import app.audit.models
 import app.notifications.models
 import app.activities.models
+import app.leads.models
 
 
 def run_seed(app=None):
@@ -113,6 +115,7 @@ def create_app():
     app.register_blueprint(activities)
     app.register_blueprint(reports)
     app.register_blueprint(public)
+    app.register_blueprint(leads)
 
     @app.cli.command("seed")
     def seed_command():

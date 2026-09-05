@@ -84,6 +84,7 @@ PERMISSION_GROUPS = {
         "marketplace.edit",
         "marketplace.delete",
     ),
+    "Leads": ("lead.view", "lead.edit", "lead.assign"),
     "Agencies": ("agency.view", "agency.create", "agency.edit", "agency.delete"),
     "Agents": ("agent.view", "agent.create", "agent.edit", "agent.delete"),
     "Developers": (

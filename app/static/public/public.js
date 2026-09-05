@@ -9,3 +9,10 @@ document.querySelectorAll('[data-counter]').forEach((counter) => {
     };
     tick();
 });
+
+document.querySelectorAll('[data-enquiry-source]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const source = document.querySelector('#enquiry-source');
+        if (source) source.value = button.dataset.enquirySource;
+    });
+});

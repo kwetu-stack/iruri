@@ -1,9 +1,12 @@
+from datetime import datetime
+
 from flask import render_template
 
 from flask_login import current_user, login_required
 
 from app.dashboard import dashboard
 from app.activities.models import ActivityLog
+from app.leads.models import Lead
 
 
 def _is_admin():
@@ -28,4 +31,19 @@ def index():
         .limit(10)
         .all()
     )
-    return render_template("dashboard/index.html", recent_activities=recent_activities)
+    lead_stats = {"new": 0, "today": 0, "follow_up": 0, "closed": 0}
+    if current_user.has_permission("lead.view"):
+        today = datetime.combine(datetime.utcnow().date(), datetime.min.time())
+        lead_stats = {
+            "new": Lead.query.filter_by(status="New").count(),
+            "today": Lead.query.filter(Lead.created_at >= today).count(),
+            "follow_up": Lead.query.filter(
+                Lead.status.in_(("New", "Contacted"))
+            ).count(),
+            "closed": Lead.query.filter_by(status="Closed").count(),
+        }
+    return render_template(
+        "dashboard/index.html",
+        recent_activities=recent_activities,
+        lead_stats=lead_stats,
+    )
