@@ -40,7 +40,7 @@ def upgrade():
                 },
             ).lastrowid
 
-    with op.batch_alter_table("properties", schema=None, recreate="always") as batch_op:
+    with op.batch_alter_table("properties", schema=None, recreate="auto") as batch_op:
         batch_op.add_column(
             sa.Column(
                 "seller_id",
@@ -56,7 +56,7 @@ def upgrade():
             {"seller_id": legacy_seller_id},
         )
 
-    with op.batch_alter_table("properties", schema=None, recreate="always") as batch_op:
+    with op.batch_alter_table("properties", schema=None, recreate="auto") as batch_op:
         batch_op.alter_column(
             "seller_id",
             existing_type=sa.Integer(),
@@ -84,7 +84,7 @@ def upgrade():
 
 
 def downgrade():
-    with op.batch_alter_table("properties", schema=None, recreate="always") as batch_op:
+    with op.batch_alter_table("properties", schema=None, recreate="auto") as batch_op:
         batch_op.drop_column("agent_id")
         batch_op.drop_column("developer_id")
         batch_op.drop_column("seller_id")
