@@ -1,18 +1,31 @@
 from sqlalchemy import or_
 from sqlalchemy.orm import joinedload, selectinload
-from flask import abort, flash, redirect, render_template, request, url_for
+from datetime import datetime
+
+from flask import (
+    abort,
+    current_app,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
 from flask_login import current_user
 
 from app.agents.models import Agent
 from app.agencies.models import Agency
 from app.developers.models import Developer
+from app.buyers.models import Buyer
 from app.extensions import db
 from app.audit.service import record_audit
 from app.leads.models import Lead
 from app.notifications.service import administrator_users, notify_profile, notify_users
-from app.properties.models import Property
+from app.properties.models import Property, SavedProperty
 from app.public import public
-from app.public.forms import EnquiryForm, SearchForm
+from app.public.forms import EnquiryForm, SearchForm, ViewingRequestForm
+from app.viewings.models import ViewingRequest
 
 PROPERTY_IMAGE = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
 HERO_IMAGE = "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=2200&q=85"
@@ -53,6 +66,102 @@ def _developer_counties():
         .order_by(Developer.county)
         .all()
     ]
+
+
+def _session_property_ids(key):
+    return [int(value) for value in session.get(key, []) if str(value).isdigit()]
+
+
+def _remember_property(property_id):
+    property_ids = [property_id] + [
+        value
+        for value in _session_property_ids("recently_viewed")
+        if value != property_id
+    ]
+    session["recently_viewed"] = property_ids[:8]
+    session.modified = True
+
+
+def _public_property_context(property_record):
+    _remember_property(property_record.id)
+    similar_query = _available_properties().filter(
+        Property.id != property_record.id,
+        Property.property_type == property_record.property_type,
+        Property.county == property_record.county,
+    )
+    if property_record.price:
+        similar_query = similar_query.filter(
+            Property.price >= property_record.price * 0.7,
+            Property.price <= property_record.price * 1.3,
+        )
+    if property_record.bedrooms is not None:
+        similar_query = similar_query.filter(
+            Property.bedrooms.between(
+                max(0, property_record.bedrooms - 1), property_record.bedrooms + 1
+            )
+        )
+    similar_properties = (
+        similar_query.options(selectinload(Property.images))
+        .order_by(Property.featured.desc(), Property.created_at.desc())
+        .limit(4)
+        .all()
+    )
+    recent_ids = [
+        value
+        for value in _session_property_ids("recently_viewed")
+        if value != property_record.id
+    ]
+    recent_records = (
+        _available_properties()
+        .filter(Property.id.in_(recent_ids))
+        .options(selectinload(Property.images))
+        .all()
+        if recent_ids
+        else []
+    )
+    recent_by_id = {record.id: record for record in recent_records}
+    return {
+        "similar_properties": similar_properties,
+        "recently_viewed": [
+            recent_by_id[value] for value in recent_ids if value in recent_by_id
+        ],
+        "saved_property_ids": _saved_property_ids(),
+        "today": datetime.utcnow().date().isoformat(),
+    }
+
+
+def _saved_property_ids():
+    if current_user.is_authenticated:
+        buyer = Buyer.query.filter_by(email=current_user.email).first()
+        if buyer:
+            return {
+                record.property_id
+                for record in SavedProperty.query.filter_by(buyer_id=buyer.id).all()
+            }
+    return set(_session_property_ids("saved_properties"))
+
+
+def _public_buyer(form):
+    buyer = None
+    if current_user.is_authenticated and current_user.email:
+        buyer = Buyer.query.filter_by(email=current_user.email).first()
+    if buyer is None:
+        buyer = Buyer.query.filter(
+            db.func.lower(Buyer.email) == form.email.lower()
+        ).first()
+    if buyer is None:
+        buyer = Buyer(
+            buyer_number="TEMP",
+            buyer_type="Individual",
+            full_name=form.name,
+            phone=form.phone,
+            email=form.email,
+            active=True,
+        )
+        db.session.add(buyer)
+        db.session.flush()
+        buyer.buyer_number = f"BUY-{datetime.utcnow().year}-{buyer.id:06d}"
+    return buyer
 
 
 def _available_properties(listing_type=None):
@@ -200,6 +309,7 @@ def property_detail(id):
     )
     if property_record is None:
         abort(404)
+    property_context = _public_property_context(property_record)
     form = (
         EnquiryForm.from_form(request.form)
         if request.method == "POST"
@@ -252,9 +362,170 @@ def property_detail(id):
                 property=property_record,
                 form=EnquiryForm(),
                 submitted=True,
+                **property_context,
             )
     return render_template(
-        "public/property_detail.html", property=property_record, form=form
+        "public/property_detail.html",
+        property=property_record,
+        form=form,
+        **property_context,
+    )
+
+
+@public.post("/properties/<int:id>/enquiry")
+def submit_enquiry(id):
+    property_record = _available_properties().filter_by(id=id).first_or_404()
+    form = EnquiryForm.from_form(request.form)
+    errors = form.validate()
+    if errors:
+        for error in errors:
+            flash(error, "danger")
+        return redirect(url_for("public.property_detail", id=id) + "#enquiry")
+    lead = Lead(
+        reference_number="TEMP",
+        property_id=property_record.id,
+        agent_id=property_record.agent_id,
+        name=form.name,
+        email=form.email,
+        phone=form.phone,
+        preferred_contact=form.preferred_contact,
+        message=form.message,
+        budget=float(form.budget) if form.budget else None,
+        source=form.source,
+        status="New",
+    )
+    db.session.add(lead)
+    db.session.flush()
+    lead.reference_number = f"LED-{lead.created_at.year}-{lead.id:06d}"
+    notification_values = {
+        "title": "New property enquiry",
+        "message": f"{lead.name} sent an enquiry for {property_record.title}.",
+        "notification_type": "Information",
+        "priority": "High",
+        "action_url": url_for("leads.detail", lead_id=lead.id),
+        "related_module": "Leads",
+        "related_record_id": lead.id,
+    }
+    notify_users(administrator_users(), **notification_values)
+    notify_profile(property_record.agent, **notification_values)
+    record_audit(
+        "Lead created",
+        "Leads",
+        f"Lead {lead.reference_number} created for {property_record.title}",
+        "Lead",
+        lead.id,
+        commit=False,
+    )
+    db.session.commit()
+    return render_template(
+        "public/property_detail.html",
+        property=property_record,
+        form=EnquiryForm(),
+        submitted=True,
+        **_public_property_context(property_record),
+    )
+
+
+@public.post("/properties/<int:id>/viewing")
+def submit_viewing_request(id):
+    property_record = _available_properties().filter_by(id=id).first_or_404()
+    form = ViewingRequestForm.from_form(request.form)
+    errors = form.validate()
+    if errors:
+        for error in errors:
+            flash(error, "danger")
+        return redirect(url_for("public.property_detail", id=id) + "#viewing")
+    requested_date = datetime.strptime(form.preferred_date, "%Y-%m-%d").date()
+    requested_time = datetime.strptime(form.preferred_time, "%H:%M").time()
+    buyer = _public_buyer(form)
+    viewing_request = ViewingRequest(
+        request_number="TEMP",
+        buyer=buyer,
+        property=property_record,
+        agent_id=property_record.agent_id,
+        requested_date=requested_date,
+        requested_time=requested_time,
+        status="Pending",
+        message=form.notes or None,
+    )
+    db.session.add(viewing_request)
+    db.session.flush()
+    viewing_request.request_number = (
+        f"VR-{datetime.utcnow().year}-{viewing_request.id:06d}"
+    )
+    notification_values = {
+        "title": "New viewing request",
+        "message": f"{form.name} requested a viewing for {property_record.title}.",
+        "notification_type": "Information",
+        "priority": "High",
+        "action_url": url_for("viewings.index"),
+        "related_module": "Viewings",
+        "related_record_id": viewing_request.id,
+    }
+    notify_users(administrator_users(), **notification_values)
+    notify_profile(property_record.agent, **notification_values)
+    record_audit(
+        "Viewing request created",
+        "Viewings",
+        f"Viewing request {viewing_request.request_number} created for {property_record.title}",
+        "Viewing Request",
+        viewing_request.id,
+        commit=False,
+    )
+    db.session.commit()
+    flash("Your viewing request has been received.", "success")
+    return redirect(url_for("public.property_detail", id=id) + "#viewing")
+
+
+@public.post("/properties/<int:id>/save")
+def save_public_property(id):
+    property_record = _available_properties().filter_by(id=id).first_or_404()
+    if current_user.is_authenticated:
+        handler = current_app.view_functions.get("properties.save_property")
+        if handler:
+            return handler(id)
+    saved_ids = set(_session_property_ids("saved_properties"))
+    if property_record.id in saved_ids:
+        saved_ids.remove(property_record.id)
+        flash("Property removed from saved properties.", "success")
+    else:
+        saved_ids.add(property_record.id)
+        flash("Property saved successfully.", "success")
+    session["saved_properties"] = list(saved_ids)
+    session.modified = True
+    return redirect(url_for("public.property_detail", id=id))
+
+
+@public.post("/properties/<int:id>/remove-saved")
+def remove_public_saved_property(id):
+    property_record = _available_properties().filter_by(id=id).first_or_404()
+    if current_user.is_authenticated:
+        handler = current_app.view_functions.get("properties.remove_saved_property")
+        if handler:
+            return handler(id)
+    saved_ids = set(_session_property_ids("saved_properties"))
+    saved_ids.discard(property_record.id)
+    session["saved_properties"] = list(saved_ids)
+    session.modified = True
+    flash("Property removed from saved properties.", "success")
+    return redirect(url_for("public.saved_properties"))
+
+
+@public.get("/saved-properties")
+def saved_properties():
+    saved_ids = list(_saved_property_ids())
+    records = (
+        _available_properties()
+        .filter(Property.id.in_(saved_ids))
+        .options(selectinload(Property.images))
+        .all()
+        if saved_ids
+        else []
+    )
+    by_id = {record.id: record for record in records}
+    return render_template(
+        "public/saved_properties.html",
+        properties=[by_id[value] for value in saved_ids if value in by_id],
     )
 
 

@@ -27,3 +27,16 @@ document.querySelectorAll('[data-gallery-image]').forEach((button) => {
         });
     });
 });
+
+document.querySelectorAll('[data-copy-link]').forEach((button) => {
+    button.addEventListener('click', async () => {
+        try {
+            await navigator.clipboard.writeText(button.dataset.copyLink);
+            const originalText = button.textContent;
+            button.textContent = 'Link copied';
+            window.setTimeout(() => { button.textContent = originalText; }, 1800);
+        } catch (error) {
+            window.prompt('Copy property link', button.dataset.copyLink);
+        }
+    });
+});
