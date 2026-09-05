@@ -9,6 +9,7 @@ from flask import (
     redirect,
     render_template,
     request,
+    send_from_directory,
     session,
     url_for,
 )
@@ -188,6 +189,10 @@ def _apply_search(query, form):
                 Property.neighbourhood.ilike(location),
             )
         )
+    if form.county:
+        query = query.filter(Property.county.ilike(f"%{form.county}%"))
+    if form.town:
+        query = query.filter(Property.town.ilike(f"%{form.town}%"))
     if form.property_type:
         query = query.filter(
             db.func.lower(Property.property_type) == form.property_type.lower()
@@ -207,6 +212,20 @@ def _apply_search(query, form):
             query = query.filter(Property.bedrooms >= int(form.bedrooms))
         except ValueError:
             pass
+    if form.bathrooms:
+        try:
+            query = query.filter(Property.bathrooms >= int(form.bathrooms))
+        except ValueError:
+            pass
+    if form.keyword:
+        keyword = f"%{form.keyword}%"
+        query = query.filter(
+            or_(
+                Property.title.ilike(keyword),
+                Property.description.ilike(keyword),
+                Property.listing_number.ilike(keyword),
+            )
+        )
     return query
 
 
@@ -215,13 +234,18 @@ def _property_page(listing_type=None):
     listing_type = listing_type or form.listing_type.lower() or None
     page = request.args.get("page", 1, type=int)
     query = _apply_search(_available_properties(listing_type), form)
+    sort_order = {
+        "newest": Property.created_at.desc(),
+        "price_low": Property.price.asc(),
+        "price_high": Property.price.desc(),
+    }.get(form.sort, Property.created_at.desc())
     listings = (
         query.options(
             joinedload(Property.agent),
             joinedload(Property.developer),
             selectinload(Property.images),
         )
-        .order_by(Property.created_at.desc())
+        .order_by(sort_order, Property.id.desc())
         .paginate(page=max(page, 1), per_page=12, error_out=False)
     )
     return render_template(
@@ -243,6 +267,7 @@ def home():
         .limit(6)
         .all()
     )
+
     latest = (
         _available_properties()
         .options(selectinload(Property.images))
@@ -252,10 +277,39 @@ def home():
     )
     agents = _public_agents_query().order_by(Agent.created_at.desc()).limit(4).all()
     developers = (
-        Developer.query.filter_by(is_active=True)
-        .order_by(Developer.is_verified.desc(), Developer.created_at.desc())
+        Developer.query.filter_by(is_active=True, is_verified=True)
+        .order_by(Developer.created_at.desc())
         .limit(4)
         .all()
+    )
+    featured_developments = [
+        developer
+        for developer in developers
+        if any(
+            property.status
+            and property.status.lower()
+            in {status.lower() for status in PUBLIC_STATUSES}
+            for property in developer.properties
+        )
+    ]
+    luxury = (
+        _available_properties()
+        .filter(Property.featured.is_(True))
+        .options(selectinload(Property.images))
+        .order_by(Property.price.desc())
+        .limit(4)
+        .all()
+    )
+    covered_counties = (
+        db.session.query(Property.county)
+        .filter(
+            Property.county.isnot(None),
+            db.func.lower(Property.status).in_(
+                [status.lower() for status in PUBLIC_STATUSES]
+            ),
+        )
+        .distinct()
+        .count()
     )
     return render_template(
         "public/home.html",
@@ -265,14 +319,29 @@ def home():
         developers=developers,
         stats={
             "properties": _available_properties().count(),
-            "agents": Agent.query.filter_by(is_active=True).count(),
-            "developers": Developer.query.filter_by(is_active=True).count(),
+            "agents": _public_agents_query().count(),
+            "agencies": Agency.query.filter_by(is_active=True).count(),
+            "developers": Developer.query.filter_by(
+                is_active=True, is_verified=True
+            ).count(),
+            "developments": Developer.query.filter_by(
+                is_active=True, is_verified=True
+            ).count(),
+            "counties": covered_counties,
             "clients": 1200,
         },
         hero_image=HERO_IMAGE,
         property_image=PROPERTY_IMAGE,
         form=SearchForm.from_args(request.args),
+        luxury=luxury,
+        featured_developments=featured_developments,
+        featured_developers=developers,
     )
+
+
+@public.get("/favicon.ico")
+def favicon():
+    return send_from_directory(current_app.static_folder, "img/iruri-logo.png")
 
 
 @public.get("/buy")
@@ -682,3 +751,28 @@ def about():
 @public.get("/contact")
 def contact():
     return render_template("public/contact.html")
+
+
+@public.get("/faq")
+def faq():
+    return render_template("public/faq.html")
+
+
+@public.get("/privacy")
+def privacy():
+    return render_template("public/privacy.html")
+
+
+@public.get("/terms")
+def terms():
+    return render_template("public/terms.html")
+
+
+@public.get("/cookies")
+def cookie_policy():
+    return render_template("public/cookie_policy.html")
+
+
+@public.get("/disclaimer")
+def disclaimer():
+    return render_template("public/disclaimer.html")

@@ -5,21 +5,31 @@ import re
 @dataclass(frozen=True)
 class SearchForm:
     location: str = ""
+    county: str = ""
+    town: str = ""
     property_type: str = ""
     min_price: str = ""
     max_price: str = ""
     bedrooms: str = ""
+    bathrooms: str = ""
+    keyword: str = ""
     listing_type: str = ""
+    sort: str = "newest"
 
     @classmethod
     def from_args(cls, args):
         return cls(
             location=args.get("location", "").strip(),
+            county=args.get("county", "").strip(),
+            town=args.get("town", "").strip(),
             property_type=args.get("property_type", "").strip(),
             min_price=args.get("min_price", "").strip(),
             max_price=args.get("max_price", "").strip(),
             bedrooms=args.get("bedrooms", "").strip(),
+            bathrooms=args.get("bathrooms", "").strip(),
+            keyword=args.get("keyword", "").strip(),
             listing_type=args.get("listing_type", "").strip(),
+            sort=args.get("sort", "newest").strip() or "newest",
         )
 
 

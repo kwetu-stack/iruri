@@ -68,6 +68,10 @@ def create_app():
     migrate.init_app(app, db)
     login_manager.init_app(app)
 
+    @app.errorhandler(404)
+    def page_not_found(error):
+        return render_template("errors/404.html"), 404
+
     from flask import redirect, url_for
 
     @app.route("/amenities")
