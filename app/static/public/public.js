@@ -16,3 +16,14 @@ document.querySelectorAll('[data-enquiry-source]').forEach((button) => {
         if (source) source.value = button.dataset.enquirySource;
     });
 });
+
+document.querySelectorAll('[data-gallery-image]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const image = document.querySelector('#gallery-main-image');
+        if (!image) return;
+        image.src = button.dataset.galleryImage;
+        document.querySelectorAll('.gallery-thumb').forEach((thumb) => {
+            thumb.classList.toggle('active', thumb === button);
+        });
+    });
+});

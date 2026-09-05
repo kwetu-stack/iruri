@@ -14,10 +14,15 @@ from app.public.forms import EnquiryForm, SearchForm
 
 PROPERTY_IMAGE = "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
 HERO_IMAGE = "https://images.unsplash.com/photo-1600607687920-4e2a09cf159d?auto=format&fit=crop&w=2200&q=85"
+PUBLIC_STATUSES = ("Published", "Available", "Visible")
 
 
 def _available_properties(listing_type=None):
-    query = Property.query.filter(db.func.lower(Property.status) == "available")
+    query = Property.query.filter(
+        db.func.lower(Property.status).in_(
+            [status.lower() for status in PUBLIC_STATUSES]
+        )
+    )
     if listing_type:
         query = query.filter(
             db.func.lower(Property.listing_type).contains(listing_type.lower())
@@ -60,6 +65,7 @@ def _apply_search(query, form):
 
 def _property_page(listing_type=None):
     form = SearchForm.from_args(request.args)
+    listing_type = listing_type or form.listing_type.lower() or None
     page = request.args.get("page", 1, type=int)
     query = _apply_search(_available_properties(listing_type), form)
     listings = (
@@ -76,6 +82,7 @@ def _property_page(listing_type=None):
         listings=listings,
         form=form,
         listing_type=listing_type,
+        public_statuses=PUBLIC_STATUSES,
     )
 
 
@@ -136,6 +143,12 @@ def rent():
     return _property_page("rent")
 
 
+@public.get("/properties")
+def properties():
+    return _property_page()
+
+
+@public.route("/properties/<int:id>", methods=["GET", "POST"])
 @public.route("/property/<int:id>", methods=["GET", "POST"])
 def property_detail(id):
     property_record = (
@@ -144,7 +157,12 @@ def property_detail(id):
             joinedload(Property.developer),
             selectinload(Property.images),
         )
-        .filter_by(id=id)
+        .filter(
+            Property.id == id,
+            db.func.lower(Property.status).in_(
+                [status.lower() for status in PUBLIC_STATUSES]
+            ),
+        )
         .first()
     )
     if property_record is None:

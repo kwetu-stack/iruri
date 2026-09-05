@@ -9,6 +9,7 @@ class SearchForm:
     min_price: str = ""
     max_price: str = ""
     bedrooms: str = ""
+    listing_type: str = ""
 
     @classmethod
     def from_args(cls, args):
@@ -18,6 +19,7 @@ class SearchForm:
             min_price=args.get("min_price", "").strip(),
             max_price=args.get("max_price", "").strip(),
             bedrooms=args.get("bedrooms", "").strip(),
+            listing_type=args.get("listing_type", "").strip(),
         )
 
 
