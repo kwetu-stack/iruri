@@ -79,14 +79,18 @@ DEFAULT_EMAIL_TEMPLATES = (
 
 def seed_default_email_templates():
     """Add missing system templates without overwriting administrator changes."""
-    from sqlalchemy.exc import OperationalError
+    from sqlalchemy import inspect as sa_inspect
+    from sqlalchemy.exc import OperationalError, ProgrammingError
+
+    if not sa_inspect(db.engine).has_table(EmailTemplate.__tablename__):
+        return
 
     try:
         existing_keys = {
             template_key
             for template_key, in db.session.query(EmailTemplate.template_key)
         }
-    except OperationalError:
+    except (OperationalError, ProgrammingError):
         db.session.rollback()
         return
 

@@ -1,5 +1,6 @@
 from flask import Blueprint
-from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import OperationalError, ProgrammingError
+from sqlalchemy import inspect as sa_inspect
 
 from app.extensions import db
 
@@ -15,6 +16,12 @@ from app.properties.models import (
     PropertyVideo,
 )
 from app.properties.image_models import PropertyImage
+
+
+def table_exists(table_name):
+    """True when ``table_name`` exists in the bound database (any dialect)."""
+    return sa_inspect(db.engine).has_table(table_name)
+
 
 DEFAULT_AMENITIES = (
     "Swimming Pool",
@@ -65,10 +72,12 @@ DEFAULT_FEATURES = {
 
 
 def seed_default_amenities():
+    if not table_exists(Amenity.__tablename__):
+        return
     try:
         if Amenity.query.first() is not None:
             return
-    except OperationalError:
+    except (OperationalError, ProgrammingError):
         db.session.rollback()
         return
 
@@ -77,10 +86,12 @@ def seed_default_amenities():
 
 
 def seed_default_features():
+    if not table_exists(PropertyFeature.__tablename__):
+        return
     try:
         if PropertyFeature.query.first() is not None:
             return
-    except OperationalError:
+    except (OperationalError, ProgrammingError):
         db.session.rollback()
         return
 

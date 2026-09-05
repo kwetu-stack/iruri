@@ -1,4 +1,5 @@
 from flask import Flask, current_app, redirect, render_template, url_for
+import click
 from flask_login import login_required
 from app.dashboard import dashboard
 
@@ -33,6 +34,23 @@ import app.admin.roles
 import app.audit.models
 import app.notifications.models
 import app.activities.models
+
+
+def run_seed(app=None):
+    """Seed default lookup data. Explicit, never at import time.
+
+    Safe to run on an empty database: every seed function verifies its
+    table exists (via SQLAlchemy inspection) and skips cleanly when the
+    schema has not been migrated yet. Intended to run AFTER
+    ``flask db upgrade`` — see scripts/release.py.
+    """
+    app = app or current_app
+    with app.app_context():
+        seed_default_amenities()
+        seed_default_features()
+        seed_default_settings()
+        seed_default_roles_and_permissions()
+        seed_default_email_templates()
 
 
 def create_app():
@@ -97,11 +115,10 @@ def create_app():
     app.register_blueprint(activities)
     app.register_blueprint(reports)
 
-    with app.app_context():
-       # seed_default_amenities()
-       # seed_default_features()
-       # seed_default_settings()
-       # seed_default_roles_and_permissions()
-       #seed_default_email_templates()
+    @app.cli.command("seed")
+    def seed_command():
+        """Seed default lookup tables (run after `flask db upgrade`)."""
+        run_seed(app)
+        click.echo("✓ Default lookup data seeded.")
 
     return app

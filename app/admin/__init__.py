@@ -114,7 +114,13 @@ DEFAULT_SETTINGS = (
 
 def seed_default_settings():
     """Add missing defaults without overwriting administrator changes."""
-    from sqlalchemy.exc import OperationalError
+    from sqlalchemy import inspect as sa_inspect
+    from sqlalchemy.exc import OperationalError, ProgrammingError
+
+    from app.extensions import db
+
+    if not sa_inspect(db.engine).has_table(SystemSetting.__tablename__):
+        return
 
     try:
         existing_keys = {
@@ -123,9 +129,7 @@ def seed_default_settings():
                 SystemSetting.setting_key
             ).all()
         }
-    except OperationalError:
-        from app.extensions import db
-
+    except (OperationalError, ProgrammingError):
         db.session.rollback()
         return
 
@@ -135,7 +139,5 @@ def seed_default_settings():
         if setting["setting_key"] not in existing_keys
     ]
     if missing:
-        from app.extensions import db
-
         db.session.add_all(missing)
         db.session.commit()

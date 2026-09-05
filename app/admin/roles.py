@@ -125,13 +125,26 @@ PERMISSION_GROUPS = {
 
 
 def seed_default_roles_and_permissions():
-    from sqlalchemy.exc import OperationalError
+    from sqlalchemy import inspect as sa_inspect
+    from sqlalchemy.exc import OperationalError, ProgrammingError
+
+    inspector = sa_inspect(db.engine)
+    if not (
+        inspector.has_table(Role.__tablename__)
+        and inspector.has_table(Permission.__tablename__)
+    ):
+        return
 
     try:
         roles = {role.name: role for role in Role.query.all()}
-    except OperationalError:
+        permissions = {
+            permission.permission_key: permission
+            for permission in Permission.query.all()
+        }
+    except (OperationalError, ProgrammingError):
         db.session.rollback()
         return
+
     for name, description, is_system_role in DEFAULT_ROLES:
         if name not in roles:
             roles[name] = Role(
@@ -139,9 +152,6 @@ def seed_default_roles_and_permissions():
             )
             db.session.add(roles[name])
 
-    permissions = {
-        permission.permission_key: permission for permission in Permission.query.all()
-    }
     for module, keys in PERMISSION_GROUPS.items():
         for key in keys:
             if key not in permissions:
