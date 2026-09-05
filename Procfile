@@ -1,2 +1,2 @@
 release: python scripts/release.py
-web: gunicorn wsgi:app
+web: python scripts/release.py && gunicorn wsgi:app
