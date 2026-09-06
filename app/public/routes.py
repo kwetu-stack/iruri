@@ -359,8 +359,7 @@ def properties():
     return _property_page()
 
 
-@public.route("/properties/<int:id>", methods=["GET", "POST"])
-@public.route("/property/<int:id>", methods=["GET", "POST"])
+@public.route("/listing/<int:id>", methods=["GET", "POST"])
 def property_detail(id):
     property_record = (
         Property.query.options(
@@ -441,7 +440,7 @@ def property_detail(id):
     )
 
 
-@public.post("/properties/<int:id>/enquiry")
+@public.post("/listing/<int:id>/enquiry")
 def submit_enquiry(id):
     property_record = _available_properties().filter_by(id=id).first_or_404()
     form = EnquiryForm.from_form(request.form)
@@ -495,7 +494,7 @@ def submit_enquiry(id):
     )
 
 
-@public.post("/properties/<int:id>/viewing")
+@public.post("/listing/<int:id>/viewing")
 def submit_viewing_request(id):
     property_record = _available_properties().filter_by(id=id).first_or_404()
     form = ViewingRequestForm.from_form(request.form)
@@ -546,7 +545,7 @@ def submit_viewing_request(id):
     return redirect(url_for("public.property_detail", id=id) + "#viewing")
 
 
-@public.post("/properties/<int:id>/save")
+@public.post("/listing/<int:id>/save")
 def save_public_property(id):
     property_record = _available_properties().filter_by(id=id).first_or_404()
     if current_user.is_authenticated:
@@ -565,7 +564,7 @@ def save_public_property(id):
     return redirect(url_for("public.property_detail", id=id))
 
 
-@public.post("/properties/<int:id>/remove-saved")
+@public.post("/listing/<int:id>/remove-saved")
 def remove_public_saved_property(id):
     property_record = _available_properties().filter_by(id=id).first_or_404()
     if current_user.is_authenticated:
