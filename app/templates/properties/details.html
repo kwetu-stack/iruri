@@ -61,8 +61,11 @@
 
 <div class="mb-4">
 
-    <div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <h5 class="mb-0">Property Images</h5>
+        <a href="{{ url_for('properties.images', id=property.id) }}" class="btn btn-sm btn-outline-primary">
+            Manage Images
+        </a>
     </div>
 
     {% if property.images %}
