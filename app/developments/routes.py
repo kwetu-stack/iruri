@@ -2,20 +2,44 @@ import os
 import uuid
 from datetime import datetime
 from decimal import Decimal, InvalidOperation
+from functools import wraps
 
-from flask import current_app, flash, redirect, render_template, request, url_for
-from flask_login import login_required
+from flask import abort, current_app, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 from werkzeug.utils import secure_filename
 
 from app.developments import developments
 from app.developments.models import Development
 from app.developers.models import Developer
 from app.extensions import db
-from app.utils.permissions import require_permission
+from app.admin.roles import has_permission
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 PROPERTY_TYPES = ("Apartment", "House", "Land", "Commercial", "Mixed Use")
 STATUSES = ("Planned", "Under Construction", "Completed", "Sold Out")
+
+
+def require_development_permission(permission_key):
+    def decorator(view):
+        @wraps(view)
+        @login_required
+        def wrapped(*args, **kwargs):
+            role_name = (getattr(current_user, "role", "") or "").lower()
+            role_record_name = (
+                getattr(getattr(current_user, "role_record", None), "name", "") or ""
+            ).lower()
+            administrator = role_name in {
+                "admin",
+                "administrator",
+                "super administrator",
+            } or role_record_name in {"administrator", "super administrator"}
+            if not administrator and not has_permission(current_user, permission_key):
+                abort(403)
+            return view(*args, **kwargs)
+
+        return wrapped
+
+    return decorator
 
 
 def _upload_folder():
@@ -109,14 +133,14 @@ def public_detail(id):
 
 
 @developments.get("/admin")
-@require_permission("development.view")
+@require_development_permission("development.view")
 def admin_index():
     development_list = Development.query.order_by(Development.created_at.desc()).all()
     return render_template("developments/index.html", developments=development_list)
 
 
 @developments.route("/admin/create", methods=["GET", "POST"])
-@require_permission("development.create")
+@require_development_permission("development.create")
 def create():
     context = _form_context()
     if request.method == "POST":
@@ -145,7 +169,7 @@ def create():
 
 
 @developments.route("/admin/<int:id>/edit", methods=["GET", "POST"])
-@require_permission("development.edit")
+@require_development_permission("development.edit")
 def edit(id):
     development = Development.query.get_or_404(id)
     context = _form_context()
@@ -186,14 +210,14 @@ def edit(id):
 
 
 @developments.get("/admin/<int:id>")
-@require_permission("development.view")
+@require_development_permission("development.view")
 def admin_detail(id):
     development = Development.query.get_or_404(id)
     return render_template("developments/details.html", development=development)
 
 
 @developments.route("/admin/<int:id>/delete", methods=["GET", "POST"])
-@require_permission("development.delete")
+@require_development_permission("development.delete")
 def delete(id):
     development = Development.query.get_or_404(id)
     if request.method == "POST":

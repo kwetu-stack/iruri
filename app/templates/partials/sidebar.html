@@ -100,7 +100,7 @@
             </a>
         </li>
 
-        {% if current_user.is_authenticated and current_user.has_permission('development.view') %}
+        {% if current_user.is_authenticated and (current_user.has_permission('development.view') or current_user.role|lower in ['admin', 'administrator', 'super administrator'] or (current_user.role_record and current_user.role_record.name|lower in ['administrator', 'super administrator'])) %}
         <li class="nav-item">
             <a class="nav-link{% if current_endpoint.startswith('developments.') and current_endpoint != 'developments.index' and current_endpoint != 'developments.public_detail' %} active{% endif %}" href="{{ url_for('developments.admin_index') }}"{% if current_endpoint.startswith('developments.') and current_endpoint != 'developments.index' and current_endpoint != 'developments.public_detail' %} aria-current="page"{% endif %}>
                 🏘 Developments
