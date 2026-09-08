@@ -32,7 +32,7 @@
                     <td>{{ agent.agent_number }}</td>
                     <td>
                         {% if agent.profile_photo %}
-                        <img src="{{ url_for('static', filename='uploads/agents/' ~ agent.profile_photo) }}" alt="{{ agent.full_name }}" class="rounded-circle" width="48" height="48" style="object-fit: cover;">
+                        <img src="{{ url_for('media.legacy', path='agents/' ~ agent.profile_photo) }}" alt="{{ agent.full_name }}" class="rounded-circle" width="48" height="48" style="object-fit: cover;">
                         {% else %}
                         <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 48px; height: 48px;">{{ agent.first_name[0] }}{{ agent.last_name[0] }}</div>
                         {% endif %}

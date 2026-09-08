@@ -7,6 +7,7 @@ from flask_login import login_required
 from werkzeug.utils import secure_filename
 
 from app.extensions import db
+from app.media.service import MediaService
 from app.sellers import sellers
 from app.sellers.models import Seller
 from app.audit.service import record_audit
@@ -48,17 +49,19 @@ def _within_size(uploaded_file):
 
 
 def _save_photo(uploaded_file):
-    extension = secure_filename(uploaded_file.filename).rsplit(".", 1)[1].lower()
-    filename = f"{uuid.uuid4().hex}.{extension}"
-    uploaded_file.save(os.path.join(_upload_folder(), filename))
-    return filename
+    asset = MediaService.upload(
+        uploaded_file,
+        module="sellers",
+        uploaded_by=current_user.id if current_user.is_authenticated else None,
+        allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
+    )
+    return asset.filename
 
 
 def _remove_photo(filename):
-    if filename:
-        path = os.path.join(_upload_folder(), filename)
-        if os.path.isfile(path):
-            os.remove(path)
+    asset = MediaService.find("sellers", None, filename) if filename else None
+    if asset:
+        MediaService.delete(asset)
 
 
 def _photo_error(uploaded_file):

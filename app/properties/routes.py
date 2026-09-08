@@ -39,6 +39,8 @@ from app.properties.models import (
     SavedProperty,
 )
 from app.transactions.models import PropertyTransaction
+from app.media.models import MediaAsset
+from app.media.service import MediaService
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
@@ -529,19 +531,22 @@ def upload_video(id):
                 .scalar()
                 or 0
             ) + 1
-            saved_path = None
             file_name = None
             file_path = None
 
             if video_type == "upload":
-                original_filename = secure_filename(uploaded_file.filename)
-                extension = original_filename.rsplit(".", 1)[1].lower()
-                timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-                property_number = secure_filename(property.listing_number) or "property"
-                file_name = f"{property_number}_{timestamp}.{extension}"
-                saved_path = os.path.join(_video_upload_folder(), file_name)
-                uploaded_file.save(saved_path)
-                file_path = os.path.join("uploads", "property_videos", file_name)
+                asset = MediaService.upload(
+                    uploaded_file,
+                    module="videos",
+                    record_id=property.id,
+                    uploaded_by=(
+                        current_user.id if current_user.is_authenticated else None
+                    ),
+                    allowed_extensions=ALLOWED_VIDEO_EXTENSIONS,
+                    max_size=MAX_VIDEO_SIZE,
+                )
+                file_name = asset.filename
+                file_path = asset.storage_path
 
             video = PropertyVideo(
                 property_id=property.id,
@@ -558,8 +563,6 @@ def upload_video(id):
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-                if saved_path and os.path.exists(saved_path):
-                    os.remove(saved_path)
                 raise
 
             flash("Property video saved successfully.", "success")
@@ -574,6 +577,11 @@ def watch_video(id):
     video = PropertyVideo.query.get_or_404(id)
     if video.video_type == "external":
         return redirect(video.external_url)
+    asset = MediaService.find("videos", video.property_id, video.file_name)
+    if asset:
+        return send_file(
+            MediaService.storage_root() / asset.storage_path, conditional=True
+        )
     return send_from_directory(_video_upload_folder(), video.file_name)
 
 
@@ -582,15 +590,15 @@ def watch_video(id):
 def delete_video(id):
     video = PropertyVideo.query.get_or_404(id)
     property_id = video.property_id
-    file_path = (
-        os.path.join(_video_upload_folder(), video.file_name)
+    asset = (
+        MediaService.find("videos", video.property_id, video.file_name)
         if video.video_type == "upload" and video.file_name
         else None
     )
     db.session.delete(video)
     db.session.commit()
-    if file_path and os.path.exists(file_path):
-        os.remove(file_path)
+    if asset:
+        MediaService.delete(asset)
     flash("Property video deleted successfully.", "success")
     return redirect(url_for("properties.details", id=property_id))
 
@@ -645,20 +653,23 @@ def upload_document():
             flash("Documents must be 20 MB or smaller.", "danger")
         else:
             original_filename = secure_filename(uploaded_file.filename)
-            extension = original_filename.rsplit(".", 1)[1].lower()
-            stored_filename = f"{uuid.uuid4().hex}.{extension}"
-            upload_folder = _document_upload_folder()
-            file_path = os.path.join(upload_folder, stored_filename)
-            uploaded_file.save(file_path)
+            asset = MediaService.upload(
+                uploaded_file,
+                module="documents",
+                record_id=selected_property.id,
+                uploaded_by=current_user.id if current_user.is_authenticated else None,
+                allowed_extensions=ALLOWED_DOCUMENT_EXTENSIONS,
+                max_size=MAX_DOCUMENT_SIZE,
+            )
+            extension = asset.file_extension
+            stored_filename = asset.filename
             document = PropertyDocument(
                 property_id=selected_property.id,
                 document_type=document_type,
                 document_name=original_filename,
                 file_name=stored_filename,
-                file_path=os.path.join(
-                    "uploads", "property_documents", stored_filename
-                ),
-                file_size=os.path.getsize(file_path),
+                file_path=asset.storage_path,
+                file_size=asset.file_size,
                 file_extension=extension,
                 uploaded_by=(
                     current_user.id if current_user.is_authenticated else None
@@ -670,8 +681,6 @@ def upload_document():
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-                if os.path.exists(file_path):
-                    os.remove(file_path)
                 raise
             flash("Document uploaded successfully.", "success")
             return redirect(url_for("properties.details", id=selected_property.id))
@@ -686,6 +695,13 @@ def upload_document():
 @login_required
 def download_document(id):
     document = PropertyDocument.query.get_or_404(id)
+    asset = MediaService.find("documents", document.property_id, document.file_name)
+    if asset:
+        return send_file(
+            MediaService.storage_root() / asset.storage_path,
+            as_attachment=True,
+            download_name=document.document_name,
+        )
     return send_from_directory(
         _document_upload_folder(),
         document.file_name,
@@ -699,11 +715,11 @@ def download_document(id):
 def delete_document(id):
     document = PropertyDocument.query.get_or_404(id)
     property_id = document.property_id
-    file_path = os.path.join(_document_upload_folder(), document.file_name)
+    asset = MediaService.find("documents", document.property_id, document.file_name)
     db.session.delete(document)
     db.session.commit()
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    if asset:
+        MediaService.delete(asset)
     flash("Document deleted successfully.", "success")
     return redirect(url_for("properties.details", id=property_id))
 
@@ -748,18 +764,16 @@ def upload_floor_plan(id):
             flash("Floor plans must be 20 MB or smaller.", "danger")
         else:
             original_filename = secure_filename(uploaded_file.filename)
-            extension = original_filename.rsplit(".", 1)[1].lower()
-            timestamp = (
-                __import__("datetime").datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+            asset = MediaService.upload(
+                uploaded_file,
+                module="floor_plans",
+                record_id=property.id,
+                uploaded_by=current_user.id if current_user.is_authenticated else None,
+                allowed_extensions=ALLOWED_FLOOR_PLAN_EXTENSIONS,
+                max_size=MAX_FLOOR_PLAN_SIZE,
             )
-            safe_property_number = property.listing_number.replace(" ", "")
-            safe_floor_name = _sanitize_floor_name(floor_name)
-            stored_filename = (
-                f"{safe_property_number}_{safe_floor_name}_{timestamp}.{extension}"
-            )
-            file_path = os.path.join(_floor_plan_upload_folder(), stored_filename)
-
-            uploaded_file.save(file_path)
+            extension = asset.file_extension
+            stored_filename = asset.filename
 
             next_order = (
                 db.session.query(db.func.max(PropertyFloorPlan.display_order))
@@ -773,9 +787,9 @@ def upload_floor_plan(id):
                 floor_name=floor_name,
                 description=description or None,
                 file_name=stored_filename,
-                file_path=os.path.join("uploads", "floor_plans", stored_filename),
+                file_path=asset.storage_path,
                 file_extension=extension,
-                file_size=os.path.getsize(file_path),
+                file_size=asset.file_size,
                 display_order=next_order,
             )
 
@@ -784,8 +798,6 @@ def upload_floor_plan(id):
                 db.session.commit()
             except Exception:
                 db.session.rollback()
-                if os.path.exists(file_path):
-                    os.remove(file_path)
                 raise
 
             flash("Floor plan uploaded successfully.", "success")
@@ -804,6 +816,15 @@ def download_floor_plan(id):
     download_name = (
         f"{_sanitize_floor_name(floor_plan.floor_name)}.{floor_plan.file_extension}"
     )
+    asset = MediaService.find(
+        "floor_plans", floor_plan.property_id, floor_plan.file_name
+    )
+    if asset:
+        return send_file(
+            MediaService.storage_root() / asset.storage_path,
+            as_attachment=True,
+            download_name=download_name,
+        )
     return send_from_directory(
         _floor_plan_upload_folder(),
         floor_plan.file_name,
@@ -817,13 +838,15 @@ def download_floor_plan(id):
 def delete_floor_plan(id):
     floor_plan = PropertyFloorPlan.query.get_or_404(id)
     property_id = floor_plan.property_id
-    file_path = os.path.join(_floor_plan_upload_folder(), floor_plan.file_name)
+    asset = MediaService.find(
+        "floor_plans", floor_plan.property_id, floor_plan.file_name
+    )
 
     db.session.delete(floor_plan)
     db.session.commit()
 
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    if asset:
+        MediaService.delete(asset)
 
     flash("Floor plan deleted successfully.", "success")
     return redirect(url_for("properties.details", id=property_id))
@@ -880,27 +903,30 @@ def upload_images(id):
             flash("Select at least one image to upload.", "danger")
             return redirect(url_for("properties.upload_images", id=property.id))
 
-        upload_folder = _image_upload_folder()
         next_order = (
             db.session.query(db.func.max(PropertyImage.display_order))
             .filter_by(property_id=property.id)
             .scalar()
         )
         next_order = (next_order or 0) + 1
-        saved_paths = []
-
         try:
             for uploaded_file in valid_files:
                 original_filename = uploaded_file.filename
-                extension = original_filename.rsplit(".", 1)[1].lower()
-                filename = f"{uuid.uuid4().hex}.{extension}"
-                file_path = os.path.join(upload_folder, filename)
-                uploaded_file.save(file_path)
-                saved_paths.append(file_path)
+                asset = MediaService.upload(
+                    uploaded_file,
+                    module="properties",
+                    record_id=property.id,
+                    uploaded_by=(
+                        current_user.id if current_user.is_authenticated else None
+                    ),
+                    allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
+                    max_size=MAX_IMAGE_SIZE,
+                    display_order=next_order,
+                )
                 db.session.add(
                     PropertyImage(
                         property_id=property.id,
-                        filename=filename,
+                        filename=asset.filename,
                         original_filename=original_filename,
                         display_order=next_order,
                     )
@@ -910,9 +936,6 @@ def upload_images(id):
             db.session.commit()
         except Exception:
             db.session.rollback()
-            for file_path in saved_paths:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
             raise
 
         flash("Images uploaded successfully.", "success")
@@ -938,13 +961,13 @@ def upload_images(id):
 def delete_image(id):
     image = PropertyImage.query.get_or_404(id)
     property_id = image.property_id
-    file_path = os.path.join(_image_upload_folder(), image.filename)
+    asset = MediaService.find("properties", image.property_id, image.filename)
 
     db.session.delete(image)
     db.session.commit()
 
-    if os.path.exists(file_path):
-        os.remove(file_path)
+    if asset:
+        MediaService.delete(asset)
 
     flash("Image deleted successfully.", "success")
     return redirect(url_for("properties.images", id=property_id))

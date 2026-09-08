@@ -21,3 +21,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = database_url or "sqlite:///iruri.db"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+    MEDIA_STORAGE_ROOT = os.getenv(
+        "MEDIA_STORAGE_ROOT",
+        os.path.join(os.path.dirname(__file__), "instance", "media"),
+    )

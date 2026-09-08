@@ -8,6 +8,7 @@ from werkzeug.utils import secure_filename
 from app.developers import developers
 from app.developers.models import Developer
 from app.extensions import db
+from app.media.service import MediaService
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 MAX_IMAGE_SIZE = 10 * 1024 * 1024
@@ -36,17 +37,19 @@ def _within_size(uploaded_file):
 
 
 def _save_logo(uploaded_file):
-    extension = secure_filename(uploaded_file.filename).rsplit(".", 1)[1].lower()
-    filename = f"{uuid.uuid4().hex}.{extension}"
-    uploaded_file.save(os.path.join(_upload_folder(), filename))
-    return filename
+    asset = MediaService.upload(
+        uploaded_file,
+        module="developers",
+        uploaded_by=current_user.id if current_user.is_authenticated else None,
+        allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
+    )
+    return asset.filename
 
 
 def _remove_logo(filename):
-    if filename:
-        path = os.path.join(_upload_folder(), filename)
-        if os.path.isfile(path):
-            os.remove(path)
+    asset = MediaService.find("developers", None, filename) if filename else None
+    if asset:
+        MediaService.delete(asset)
 
 
 def _developer_values(form):

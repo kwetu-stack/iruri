@@ -73,7 +73,7 @@
         {% for image in property.images|sort(attribute='display_order') %}
         <div class="col-sm-6 col-lg-3">
             <div class="card h-100 shadow-sm">
-                <img src="{{ url_for('static', filename='uploads/properties/' ~ image.filename) }}" class="card-img-top" alt="{{ image.original_filename }}" style="height: 180px; object-fit: cover;">
+                <img src="{{ url_for('media.legacy', path='properties/' ~ image.filename) }}" class="card-img-top" alt="{{ image.original_filename }}" style="height: 180px; object-fit: cover;">
                 <div class="card-body p-2">
                     <p class="small text-truncate mb-0" title="{{ image.original_filename }}">{{ image.original_filename }}</p>
                     {% if image.is_cover %}<span class="badge bg-primary mt-2">Cover</span>{% endif %}

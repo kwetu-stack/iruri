@@ -13,6 +13,7 @@ from app.developments.models import Development
 from app.developers.models import Developer
 from app.extensions import db
 from app.admin.roles import has_permission
+from app.media.service import MediaService
 
 ALLOWED_IMAGE_EXTENSIONS = {"jpg", "jpeg", "png", "webp"}
 PROPERTY_TYPES = ("Apartment", "House", "Land", "Commercial", "Mixed Use")
@@ -49,18 +50,19 @@ def _upload_folder():
 
 
 def _save_cover_image(uploaded_file):
-    filename = secure_filename(uploaded_file.filename or "")
-    extension = filename.rsplit(".", 1)[1].lower()
-    stored_name = f"{uuid.uuid4().hex}.{extension}"
-    uploaded_file.save(os.path.join(_upload_folder(), stored_name))
-    return stored_name
+    asset = MediaService.upload(
+        uploaded_file,
+        module="developments",
+        uploaded_by=current_user.id if current_user.is_authenticated else None,
+        allowed_extensions=ALLOWED_IMAGE_EXTENSIONS,
+    )
+    return asset.filename
 
 
 def _remove_cover_image(filename):
-    if filename:
-        path = os.path.join(_upload_folder(), filename)
-        if os.path.isfile(path):
-            os.remove(path)
+    asset = MediaService.find("developments", None, filename) if filename else None
+    if asset:
+        MediaService.delete(asset)
 
 
 def _valid_image(uploaded_file):
