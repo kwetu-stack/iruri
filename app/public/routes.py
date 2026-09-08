@@ -34,9 +34,7 @@ PUBLIC_STATUSES = ("Published", "Available", "Visible")
 
 
 def _public_agents_query():
-    return Agent.query.filter(
-        Agent.is_active.is_(True), Agent.license_number.isnot(None)
-    )
+    return Agent.query.filter(Agent.is_active.is_(True))
 
 
 def _agent_counties():
@@ -45,7 +43,6 @@ def _agent_counties():
         for (value,) in db.session.query(Agent.county)
         .filter(
             Agent.is_active.is_(True),
-            Agent.license_number.isnot(None),
             Agent.county.isnot(None),
         )
         .distinct()
