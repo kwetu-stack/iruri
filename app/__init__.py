@@ -1,6 +1,4 @@
-from pathlib import Path
-
-from flask import Flask, current_app, redirect, render_template, send_file, url_for
+from flask import Flask, current_app, redirect, render_template, url_for
 import click
 from flask_login import login_required
 from app.dashboard import dashboard
@@ -15,8 +13,6 @@ from app.agents import agents
 from app.agencies import agencies
 from app.developers import developers
 from app.developments import developments
-from app.media import media
-from app.media.service import MediaService
 from app.sellers import sellers
 from app.buyers import buyers
 from app.viewings import viewings
@@ -68,17 +64,6 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
-    static_view = app.view_functions.get("static")
-
-    def persistent_static(filename):
-        if filename.startswith("uploads/"):
-            persistent_file = Path(app.config["MEDIA_STORAGE_ROOT"]) / filename[8:]
-            if persistent_file.is_file():
-                return send_file(persistent_file)
-        return static_view(filename)
-
-    app.view_functions["static"] = persistent_static
-
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
@@ -124,7 +109,6 @@ def create_app():
     app.register_blueprint(agencies)
     app.register_blueprint(developers)
     app.register_blueprint(developments)
-    app.register_blueprint(media)
     app.register_blueprint(sellers)
     app.register_blueprint(buyers)
     app.register_blueprint(viewings)
@@ -144,11 +128,5 @@ def create_app():
         """Seed default lookup tables (run after `flask db upgrade`)."""
         run_seed(app)
         click.echo("✓ Default lookup data seeded.")
-
-    @app.cli.command("media-migrate-legacy")
-    def media_migrate_legacy_command():
-        """Copy legacy static uploads into configured persistent media storage."""
-        migrated = MediaService.migrate_legacy_uploads()
-        click.echo(f"Migrated {migrated} legacy media files.")
 
     return app

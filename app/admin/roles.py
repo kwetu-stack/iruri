@@ -99,12 +99,6 @@ PERMISSION_GROUPS = {
         "development.edit",
         "development.delete",
     ),
-    "Media": (
-        "media.view",
-        "media.create",
-        "media.edit",
-        "media.delete",
-    ),
     "Commissions": (
         "commission.view",
         "commission.create",

@@ -23,7 +23,6 @@ from sqlalchemy import inspect as sa_inspect
 from app import create_app, run_seed
 from app.extensions import db
 from flask_migrate import upgrade as db_upgrade
-from app.media.service import MediaService
 
 # Tables the application needs before it can serve traffic.
 REQUIRED_TABLES = (
@@ -35,7 +34,6 @@ REQUIRED_TABLES = (
     "amenities",
     "features",
     "properties",
-    "media_assets",
 )
 
 
@@ -55,8 +53,6 @@ def main():
         print("→ Seeding default lookup data...")
         run_seed(app)
         print("✓ Default lookup data seeded.")
-        migrated = MediaService.migrate_legacy_uploads()
-        print(f"✓ Legacy media migration complete ({migrated} files copied).")
 
 
 if __name__ == "__main__":

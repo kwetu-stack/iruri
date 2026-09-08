@@ -1,7 +1,7 @@
 <article class="property-card h-100">
     <div class="property-card-media">
         {% set image = (property.images|sort(attribute='display_order')|first) if property.images else none %}
-        {% if image %}<img class="property-image" loading="lazy" src="{{ url_for('media.legacy', path='properties/' ~ image.filename) }}" alt="{{ property.title }}">
+        {% if image %}<img class="property-image" loading="lazy" src="{{ url_for('static', filename='uploads/properties/' ~ image.filename) }}" alt="{{ property.title }}">
         {% else %}<div class="property-image property-placeholder" role="img" aria-label="Property image placeholder"><span>IRURI</span></div>{% endif %}
         <span class="listing-badge">{{ property.listing_type|title }}</span>
         {% if property.featured %}<span class="featured-badge">Featured</span>{% endif %}

@@ -108,14 +108,6 @@
         </li>
         {% endif %}
 
-        {% if current_user.is_authenticated and (current_user.has_permission('media.view') or current_user.role|lower in ['admin', 'administrator', 'super administrator'] or (current_user.role_record and current_user.role_record.name|lower in ['administrator', 'super administrator'])) %}
-        <li class="nav-item">
-            <a class="nav-link{% if current_endpoint.startswith('media.') %} active{% endif %}" href="{{ url_for('media.index') }}"{% if current_endpoint.startswith('media.') %} aria-current="page"{% endif %}>
-                🗂 Media Library
-            </a>
-        </li>
-        {% endif %}
-
         {% if has_reports_access %}
         <li class="nav-item">
             <a class="nav-link{% if current_endpoint.startswith('reports.') %} active{% endif %}" href="{{ url_for('reports.analytics_dashboard') }}"{% if current_endpoint.startswith('reports.') %} aria-current="page"{% endif %}>
