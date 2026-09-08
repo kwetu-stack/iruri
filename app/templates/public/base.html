@@ -34,7 +34,7 @@
                 <a class="nav-link" href="{{ url_for('public.properties') }}">Properties</a>
                 <a class="nav-link" href="{{ url_for('public.buy') }}">Buy</a>
                 <a class="nav-link" href="{{ url_for('public.rent') }}">Rent</a>
-                <a class="nav-link" href="{{ url_for('public.developers') }}">Developments</a>
+                <a class="nav-link" href="{{ url_for('developments.index') }}">Developments</a>
                 <a class="nav-link" href="{{ url_for('public.developers') }}">Developers</a>
                 <a class="nav-link" href="{{ url_for('public.agents') }}">Agents</a>
                 <a class="nav-link" href="{{ url_for('public.agency_directory') }}">Agencies</a>
@@ -51,7 +51,7 @@
 <footer class="public-footer">
     <div class="container py-5"><div class="row g-4">
         <div class="col-lg-5"><a class="brand-mark footer-brand" href="{{ url_for('public.home') }}"><span>IRURI</span><small>PROPERTY MARKETPLACE</small></a><p class="mt-3 mb-0">A more considered way to find a place to live, invest, and belong.</p></div>
-        <div class="col-6 col-lg-2"><h6>Explore</h6><a href="{{ url_for('public.buy') }}">Buy property</a><a href="{{ url_for('public.rent') }}">Rent property</a><a href="{{ url_for('public.developers') }}">Developments</a></div>
+        <div class="col-6 col-lg-2"><h6>Explore</h6><a href="{{ url_for('public.buy') }}">Buy property</a><a href="{{ url_for('public.rent') }}">Rent property</a><a href="{{ url_for('developments.index') }}">Developments</a></div>
         <div class="col-6 col-lg-2"><h6>Company</h6><a href="{{ url_for('public.about') }}">About IRURI</a><a href="{{ url_for('public.agents') }}">Our agents</a><a href="{{ url_for('public.agency_directory') }}">Agencies</a><a href="{{ url_for('public.contact') }}">Contact us</a></div>
         <div class="col-6 col-lg-2"><h6>Information</h6><a href="{{ url_for('public.faq') }}">FAQ</a><a href="{{ url_for('public.privacy') }}">Privacy Policy</a><a href="{{ url_for('public.terms') }}">Terms of Service</a><a href="{{ url_for('public.cookie_policy') }}">Cookie Policy</a><a href="{{ url_for('public.disclaimer') }}">Disclaimer</a></div>
         <div class="col-lg-3"><h6>Get in touch</h6><p><a href="tel:+254740337272">+254 740 337 272</a><a href="tel:+254718524470">+254 718 524 470</a><a href="tel:+254723346487">+254 723 346 487</a><a href="mailto:info@iruri.co.ke">info@iruri.co.ke</a><span>Nairobi, Kenya</span></p></div>

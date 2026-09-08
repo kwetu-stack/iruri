@@ -12,6 +12,7 @@ from app.commissions import commissions
 from app.agents import agents
 from app.agencies import agencies
 from app.developers import developers
+from app.developments import developments
 from app.sellers import sellers
 from app.buyers import buyers
 from app.viewings import viewings
@@ -107,6 +108,7 @@ def create_app():
     app.register_blueprint(commissions)
     app.register_blueprint(agencies)
     app.register_blueprint(developers)
+    app.register_blueprint(developments)
     app.register_blueprint(sellers)
     app.register_blueprint(buyers)
     app.register_blueprint(viewings)

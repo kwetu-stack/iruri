@@ -93,6 +93,12 @@ PERMISSION_GROUPS = {
         "developer.edit",
         "developer.delete",
     ),
+    "Developments": (
+        "development.view",
+        "development.create",
+        "development.edit",
+        "development.delete",
+    ),
     "Commissions": (
         "commission.view",
         "commission.create",
