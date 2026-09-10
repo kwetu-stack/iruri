@@ -3,6 +3,7 @@ from sqlalchemy.orm import joinedload, selectinload
 from datetime import datetime
 
 from flask import (
+    Response,
     abort,
     current_app,
     flash,
@@ -18,11 +19,18 @@ from flask_login import current_user
 from app.agents.models import Agent
 from app.agencies.models import Agency
 from app.developers.models import Developer
+from app.developments.models import Development
 from app.buyers.models import Buyer
 from app.extensions import db
 from app.audit.service import record_audit
 from app.leads.models import Lead
 from app.notifications.service import administrator_users, notify_profile, notify_users
+from app.utils.seo import (
+    absolute_static_url,
+    absolute_url_for,
+    default_og_image,
+    site_url,
+)
 from app.properties.models import Property, SavedProperty
 from app.public import public
 from app.public.forms import EnquiryForm, SearchForm, ViewingRequestForm
@@ -173,6 +181,133 @@ def _available_properties(listing_type=None):
             db.func.lower(Property.listing_type).contains(listing_type.lower())
         )
     return query
+
+
+def _organization_schema():
+    return {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "IRURI™ Property Marketplace",
+        "url": site_url(),
+        "logo": default_og_image(),
+    }
+
+
+def _strip_none(value):
+    if isinstance(value, dict):
+        return {
+            key: _strip_none(item) for key, item in value.items() if item is not None
+        }
+    return value
+
+
+def _agency_schema(agency):
+    return _strip_none(
+        {
+            "@context": "https://schema.org",
+            "@type": "RealEstateAgent",
+            "name": agency.agency_name,
+            "description": agency.description or None,
+            "url": absolute_url_for("public.agency_detail", id=agency.id),
+            "image": (
+                absolute_static_url("uploads/agencies/" + agency.logo)
+                if agency.logo
+                else default_og_image()
+            ),
+            "telephone": agency.phone or None,
+            "email": agency.email or None,
+            "address": _strip_none(
+                {
+                    "@type": "PostalAddress",
+                    "addressLocality": agency.town or None,
+                    "addressRegion": agency.county or None,
+                    "addressCountry": "KE",
+                }
+            ),
+        }
+    )
+
+
+def _developer_schema(developer):
+    return _strip_none(
+        {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": developer.company_name,
+            "description": developer.description or None,
+            "url": absolute_url_for("public.developer_detail", id=developer.id),
+            "logo": (
+                absolute_static_url("uploads/developers/" + developer.logo)
+                if developer.logo
+                else default_og_image()
+            ),
+            "telephone": developer.phone or None,
+            "email": developer.email or None,
+            "address": _strip_none(
+                {
+                    "@type": "PostalAddress",
+                    "addressLocality": developer.town or None,
+                    "addressRegion": developer.county or None,
+                    "addressCountry": "KE",
+                }
+            ),
+        }
+    )
+
+
+def _property_schema(property_record):
+    cover = (
+        sorted(property_record.images, key=lambda image: image.display_order)[0]
+        if property_record.images
+        else None
+    )
+    image_url = (
+        absolute_static_url("uploads/properties/" + cover.filename)
+        if cover
+        else default_og_image()
+    )
+    listing_type = (property_record.listing_type or "").lower()
+    residence_type = (
+        "House" if property_record.property_type == "House" else "Apartment"
+    )
+    return _strip_none(
+        {
+            "@context": "https://schema.org",
+            "@type": residence_type,
+            "name": property_record.title,
+            "description": property_record.description or None,
+            "url": absolute_url_for("public.property_detail", id=property_record.id),
+            "image": image_url,
+            "numberOfRooms": property_record.bedrooms,
+            "address": _strip_none(
+                {
+                    "@type": "PostalAddress",
+                    "addressLocality": property_record.town or None,
+                    "addressRegion": property_record.county or None,
+                    "addressCountry": "KE",
+                }
+            ),
+            "offers": {
+                "@type": "Offer",
+                "price": property_record.price,
+                "priceCurrency": property_record.currency or "KES",
+                "availability": (
+                    "https://schema.org/InStock"
+                    if (property_record.status or "").lower()
+                    in {s.lower() for s in PUBLIC_STATUSES}
+                    else "https://schema.org/OutOfStock"
+                ),
+                "businessFunction": (
+                    "https://schema.org/LeaseOut"
+                    if "rent" in listing_type
+                    else "https://schema.org/Sell"
+                ),
+                "url": absolute_url_for(
+                    "public.property_detail", id=property_record.id
+                ),
+            },
+        }
+    )
 
 
 def _apply_search(query, form):
@@ -333,12 +468,76 @@ def home():
         luxury=luxury,
         featured_developments=featured_developments,
         featured_developers=developers,
+        structured_data=_organization_schema(),
     )
 
 
 @public.get("/favicon.ico")
 def favicon():
     return send_from_directory(current_app.static_folder, "img/iruri-logo.png")
+
+
+@public.get("/robots.txt")
+def robots_txt():
+    content = "User-agent: *\nAllow: /\n\nSitemap: {0}/sitemap.xml\n".format(site_url())
+    return Response(content, mimetype="text/plain")
+
+
+@public.get("/sitemap.xml")
+def sitemap_xml():
+    domain = site_url()
+    urls = []
+
+    def add(loc, changefreq="weekly", priority="0.5"):
+        urls.append((loc, changefreq, priority))
+
+    add(domain + "/", "daily", "1.0")
+    add(absolute_url_for("public.buy"), "daily", "0.9")
+    add(absolute_url_for("public.rent"), "daily", "0.9")
+    add(absolute_url_for("public.properties"), "daily", "0.9")
+    add(absolute_url_for("public.agency_directory"), "weekly", "0.6")
+    add(absolute_url_for("public.developers"), "weekly", "0.6")
+    add(absolute_url_for("developments.index"), "weekly", "0.6")
+
+    for (property_id,) in _available_properties().with_entities(Property.id).all():
+        add(absolute_url_for("public.property_detail", id=property_id), "weekly", "0.7")
+
+    for (agency_id,) in (
+        Agency.query.filter_by(is_active=True).with_entities(Agency.id).all()
+    ):
+        add(absolute_url_for("public.agency_detail", id=agency_id), "monthly", "0.5")
+
+    for (developer_id,) in (
+        Developer.query.filter_by(is_active=True, is_verified=True)
+        .with_entities(Developer.id)
+        .all()
+    ):
+        add(
+            absolute_url_for("public.developer_detail", id=developer_id),
+            "monthly",
+            "0.5",
+        )
+
+    for (development_id,) in Development.query.with_entities(Development.id).all():
+        add(
+            absolute_url_for("developments.public_detail", id=development_id),
+            "monthly",
+            "0.5",
+        )
+
+    xml_items = "".join(
+        "<url><loc>{0}</loc><changefreq>{1}</changefreq><priority>{2}</priority></url>".format(
+            loc, changefreq, priority
+        )
+        for loc, changefreq, priority in urls
+    )
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        + xml_items
+        + "</urlset>"
+    )
+    return Response(xml, mimetype="application/xml")
 
 
 @public.get("/buy")
@@ -427,12 +626,14 @@ def property_detail(id):
                 property=property_record,
                 form=EnquiryForm(),
                 submitted=True,
+                structured_data=_property_schema(property_record),
                 **property_context,
             )
     return render_template(
         "public/property_detail.html",
         property=property_record,
         form=form,
+        structured_data=_property_schema(property_record),
         **property_context,
     )
 
@@ -487,6 +688,7 @@ def submit_enquiry(id):
         property=property_record,
         form=EnquiryForm(),
         submitted=True,
+        structured_data=_property_schema(property_record),
         **_public_property_context(property_record),
     )
 
@@ -681,6 +883,7 @@ def agency_detail(id):
         team_members=[],
         listings=[],
         featured_properties=[],
+        structured_data=_agency_schema(agency),
     )
 
 
@@ -736,6 +939,7 @@ def developer_detail(id):
         featured_projects=[
             property for property in current_developments if property.featured
         ],
+        structured_data=_developer_schema(developer),
     )
 
 

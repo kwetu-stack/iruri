@@ -1,4 +1,4 @@
-from flask import Flask, current_app, redirect, render_template, url_for
+from flask import Flask, current_app, redirect, render_template, request, url_for
 import click
 from flask_login import login_required
 from app.dashboard import dashboard
@@ -39,6 +39,8 @@ import app.notifications.models
 import app.activities.models
 import app.leads.models
 
+from app.utils.seo import site_url, canonical_url, default_og_image, absolute_static_url
+
 
 def run_seed(app=None):
     """Seed default lookup data. Explicit, never at import time.
@@ -64,6 +66,22 @@ def create_app():
     app = Flask(__name__)
     app.config.from_object(Config)
 
+    # Canonical domain redirect: www.iruriproperties.online -> iruriproperties.online (301).
+    # Exact hostname match only, so localhost, 127.0.0.1 and Railway preview
+    # domains (e.g. *.up.railway.app) are never affected.
+    WWW_HOST = "www.iruriproperties.online"
+    APEX_HOST = "iruriproperties.online"
+
+    @app.before_request
+    def redirect_www_to_apex():
+        host = request.host.split(":")[0].lower()
+        if host == WWW_HOST:
+            target = f"https://{APEX_HOST}{request.path}"
+            query = request.query_string.decode("utf-8")
+            if query:
+                target = f"{target}?{query}"
+            return redirect(target, code=301)
+
     # Initialize extensions
     db.init_app(app)
     migrate.init_app(app, db)
@@ -72,6 +90,16 @@ def create_app():
     @app.errorhandler(404)
     def page_not_found(error):
         return render_template("errors/404.html"), 404
+
+    @app.context_processor
+    def inject_seo_defaults():
+        return {
+            "site_url": site_url(),
+            "canonical_url": canonical_url(),
+            "default_og_image": default_og_image(),
+        }
+
+    app.jinja_env.globals["absolute_static"] = absolute_static_url
 
     from flask import redirect, url_for
 

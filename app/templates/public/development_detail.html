@@ -1,5 +1,8 @@
 {% extends "public/base.html" %}
-{% block title %}{{ development.name }} | IRURI™{% endblock %}
+{% block title %}{{ development.name }} | New Development | IRURI™{% endblock %}
+{% block meta_description %}{{ (development.description or (development.name ~ ' is a ' ~ development.property_type ~ ' development by ' ~ development.developer.company_name ~ ' in ' ~ development.county ~ '.'))|truncate(160, True) }}{% endblock %}
+{% block og_type %}website{% endblock %}
+{% block og_image %}{% if development.cover_image %}{{ absolute_static('uploads/developments/' ~ development.cover_image) }}{% else %}{{ default_og_image }}{% endif %}{% endblock %}
 {% block content %}
 <section class="section pt-5"><div class="container"><a class="link-arrow d-inline-block mb-4" href="{{ url_for('developments.index') }}">← All developments</a><div class="row g-5">{% if development.cover_image %}<div class="col-lg-6"><img class="w-100 rounded" style="max-height: 460px; object-fit: cover;" src="{{ url_for('static', filename='uploads/developments/' ~ development.cover_image) }}" alt="{{ development.name }}"></div>{% endif %}<div class="col-lg-6"><p class="section-kicker mb-2">{{ development.status }}</p><h1 class="display-5 mb-3">{{ development.name }}</h1><p class="property-location mb-4">{{ development.neighbourhood or development.town }}, {{ development.county }}</p><p class="detail-description">{{ development.description or 'Discover this development from a verified developer.' }}</p><div class="spec-grid my-5"><div><strong>{{ development.property_type }}</strong><span>Property type</span></div><div><strong>{{ development.starting_price or '—' }}</strong><span>Starting price</span></div><div><strong>{{ development.completion_date or '—' }}</strong><span>Completion date</span></div><div><strong>{{ development.developer.company_name }}</strong><span>Developer</span></div></div></div></div></div></section>
 {% endblock %}

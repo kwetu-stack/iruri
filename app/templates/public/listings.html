@@ -1,6 +1,6 @@
 {% extends "public/base.html" %}
-{% block title %}Properties | IRURI™{% endblock %}
-{% block meta_description %}Explore verified homes, land, apartments, and commercial property across Kenya on IRURI.{% endblock %}
+{% block title %}{% if listing_type == 'sale' %}Buy Property in Kenya{% elif listing_type == 'rent' %}Rent Property in Kenya{% else %}Properties for Sale & Rent in Kenya{% endif %} | IRURI™{% endblock %}
+{% block meta_description %}{% if listing_type == 'sale' %}Browse verified properties for sale across Kenya on IRURI™ — houses, apartments, land, and commercial listings from trusted agents.{% elif listing_type == 'rent' %}Browse verified rental properties across Kenya on IRURI™ — apartments, houses, and commercial spaces from trusted agents.{% else %}Explore verified homes, land, apartments, and commercial property across Kenya on IRURI™.{% endif %}{% endblock %}
 {% block content %}
 <section class="listing-hero"><div class="container"><div class="section-kicker">IRURI marketplace</div><h1 class="display-5">Find a place that feels like yours</h1><p class="lead mb-0">Explore considered properties across Kenya.</p></div></section>
 <section class="section pt-5"><div class="container">

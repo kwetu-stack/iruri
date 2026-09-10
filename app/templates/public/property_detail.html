@@ -1,5 +1,8 @@
 {% extends "public/base.html" %}
-{% block title %}{{ property.title }} | IRURI™{% endblock %}
+{% block title %}{{ property.title }} | {{ property.currency or 'KES' }} {{ '{:,.0f}'.format(property.price) }} | IRURI™{% endblock %}
+{% block meta_description %}{{ property.title }} in {{ property.county or 'Kenya' }}{% if property.town %}, {{ property.town }}{% endif %} — {{ property.bedrooms or 0 }} bedroom {{ property.property_type|lower }} priced at {{ property.currency or 'KES' }} {{ '{:,.0f}'.format(property.price) }}. View photos and details on IRURI™.{% endblock %}
+{% block og_type %}website{% endblock %}
+{% block og_image %}{% set cover = (property.images|sort(attribute='display_order')|first) if property.images else none %}{% if cover %}{{ absolute_static('uploads/properties/' ~ cover.filename) }}{% else %}{{ default_og_image }}{% endif %}{% endblock %}
 {% block content %}
 <section class="section pt-5 property-detail-page"><div class="container">
     <a class="link-arrow d-inline-block mb-4" href="{{ url_for('public.properties') }}">← Back to properties</a>

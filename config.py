@@ -21,3 +21,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = database_url or "sqlite:///iruri.db"
 
     SQLALCHEMY_TRACK_MODIFICATIONS = False
+
+    # Canonical production domain used for SEO (sitemap, canonical/OG URLs).
+    # Never derived from the incoming request host, so it is never localhost.
+    SITE_URL = os.getenv("SITE_URL", "https://iruriproperties.online")
