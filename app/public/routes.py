@@ -877,11 +877,18 @@ def agency_detail(id):
     if current_user.is_authenticated:
         return redirect(url_for("agencies.details", id=id))
     agency = Agency.query.filter_by(id=id, is_active=True).first_or_404()
+    listings = (
+        _available_properties()
+        .filter(Property.agency_id == agency.id)
+        .options(selectinload(Property.images))
+        .order_by(Property.featured.desc(), Property.created_at.desc())
+        .all()
+    )
     return render_template(
         "public/agency_detail.html",
         agency=agency,
         team_members=[],
-        listings=[],
+        listings=listings,
         featured_properties=[],
         structured_data=_agency_schema(agency),
     )

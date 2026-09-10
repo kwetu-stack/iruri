@@ -127,6 +127,12 @@ class Property(db.Model):
         nullable=True,
     )
 
+    agency_id = db.Column(
+        db.Integer,
+        db.ForeignKey("agencies.id"),
+        nullable=True,
+    )
+
     listing_number = db.Column(db.String(30), unique=True, nullable=False)
 
     title = db.Column(db.String(200), nullable=False)
@@ -269,6 +275,7 @@ class Property(db.Model):
     seller = db.relationship("Seller", backref="properties")
     developer = db.relationship("Developer", backref="properties")
     agent = db.relationship("Agent", backref="properties")
+    agency = db.relationship("Agency", backref="properties")
 
     def __repr__(self):
         return f"<Property {self.listing_number}>"

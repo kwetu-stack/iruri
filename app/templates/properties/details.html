@@ -280,6 +280,8 @@
                     <dd class="col-sm-8">{{ property.developer.company_name if property.developer else "Not Assigned" }}</dd>
                     <dt class="col-sm-4">Listing Agent</dt>
                     <dd class="col-sm-8">{{ property.agent.full_name if property.agent else "Not Assigned" }}</dd>
+                    <dt class="col-sm-4">Agency</dt>
+                    <dd class="col-sm-8">{{ property.agency.agency_name if property.agency else "Not Assigned" }}</dd>
                 </dl>
 
                 <div class="row g-3">

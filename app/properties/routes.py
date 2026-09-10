@@ -20,6 +20,7 @@ from werkzeug.utils import secure_filename
 from app.sellers.models import Seller
 from app.developers.models import Developer
 from app.agents.models import Agent
+from app.agencies.models import Agency
 from app.buyers.models import Buyer
 from app.audit.service import record_audit
 from app.activities.service import record_activity
@@ -82,6 +83,7 @@ def _relationship_options():
         "sellers": Seller.query.order_by(Seller.seller_number).all(),
         "developers": Developer.query.order_by(Developer.developer_number).all(),
         "agents": Agent.query.order_by(Agent.agent_number).all(),
+        "agencies": Agency.query.order_by(Agency.agency_name).all(),
         "amenities": Amenity.query.order_by(Amenity.category, Amenity.name).all(),
         "features": PropertyFeature.query.order_by(
             PropertyFeature.category, PropertyFeature.name
@@ -958,11 +960,13 @@ def create():
         seller_id = request.form.get("seller_id", "").strip()
         developer_id = request.form.get("developer_id", "").strip()
         agent_id = request.form.get("agent_id", "").strip()
+        agency_id = request.form.get("agency_id", "").strip()
         seller = Seller.query.get(int(seller_id)) if seller_id.isdigit() else None
         developer = (
             Developer.query.get(int(developer_id)) if developer_id.isdigit() else None
         )
         agent = Agent.query.get(int(agent_id)) if agent_id.isdigit() else None
+        agency = Agency.query.get(int(agency_id)) if agency_id.isdigit() else None
 
         if not seller:
             flash("A seller is required.", "danger")
@@ -972,6 +976,9 @@ def create():
             return _render_property_form("properties/create.html")
         if agent_id and not agent:
             flash("The selected agent is invalid.", "danger")
+            return _render_property_form("properties/create.html")
+        if agency_id and not agency:
+            flash("The selected agency is invalid.", "danger")
             return _render_property_form("properties/create.html")
 
         try:
@@ -985,6 +992,7 @@ def create():
             seller_id=seller.id,
             developer_id=developer.id if developer else None,
             agent_id=agent.id if agent else None,
+            agency_id=agency.id if agency else None,
             title=request.form["title"],
             description=request.form["description"],
             property_type=request.form["property_type"],
@@ -1040,11 +1048,13 @@ def edit(id):
         seller_id = request.form.get("seller_id", "").strip()
         developer_id = request.form.get("developer_id", "").strip()
         agent_id = request.form.get("agent_id", "").strip()
+        agency_id = request.form.get("agency_id", "").strip()
         seller = Seller.query.get(int(seller_id)) if seller_id.isdigit() else None
         developer = (
             Developer.query.get(int(developer_id)) if developer_id.isdigit() else None
         )
         agent = Agent.query.get(int(agent_id)) if agent_id.isdigit() else None
+        agency = Agency.query.get(int(agency_id)) if agency_id.isdigit() else None
 
         if not seller:
             flash("A seller is required.", "danger")
@@ -1054,6 +1064,9 @@ def edit(id):
             return _render_property_form("properties/edit.html", property)
         if agent_id and not agent:
             flash("The selected agent is invalid.", "danger")
+            return _render_property_form("properties/edit.html", property)
+        if agency_id and not agency:
+            flash("The selected agency is invalid.", "danger")
             return _render_property_form("properties/edit.html", property)
 
         title = request.form.get("title", "").strip()
@@ -1081,6 +1094,7 @@ def edit(id):
         property.seller_id = seller.id
         property.developer_id = developer.id if developer else None
         property.agent_id = agent.id if agent else None
+        property.agency_id = agency.id if agency else None
         property.price = price
         property.currency = request.form.get("currency", "").strip() or None
         property.county = request.form.get("county", "").strip() or None
